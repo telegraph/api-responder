@@ -109,8 +109,10 @@ var args = process.argv.slice(2),
                                 }
                             });
 
-
-                        apiPromise.then(function() {
+                        apiPromise.then(function(response) {
+                            if(response!==undefined){
+                                api.response=response;
+                            }
                             timer = new Date().getTime() - timer;
                             setTimeout(function() {
 
