@@ -2,7 +2,7 @@ var HTTPcodes = require('http-status-codes'),
     request = require('request'),
     join = require('path').join,
     fs = require("fs"),
-
+   
     locals = {
         __mockdir: function(filename) {
             return join(__dirname, 'mock-data', filename);
@@ -19,10 +19,10 @@ var HTTPcodes = require('http-status-codes'),
 
     },
     rproxy_defaults = {
-        
+
         // a default base url can be set which reverse proxy requests are sent.
         baseUrl: '',
-       
+
         // default headers can be set here, 
         headers: {
 
@@ -40,7 +40,7 @@ var HTTPcodes = require('http-status-codes'),
         },
 
         // otherwise the 'req' headers will be used but omitting those listed below:
-        rproxy_headers_omit:['host','accept-encoding']
+        rproxy_headers_omit: ['host', 'accept-encoding']
     };
 
 
@@ -48,7 +48,8 @@ var HTTPcodes = require('http-status-codes'),
 module.exports = {
     defaults: defaults,
     locals: locals,
-    rproxy_defaults:rproxy_defaults,
+    public: 'optimize',
+    rproxy_defaults: rproxy_defaults,
     apis: [
 
         // ------------------------
@@ -60,11 +61,12 @@ module.exports = {
             endpoint: '/index.html',
             method: 'GET',
             responder: function(api, resolve) {
-                pi.response_status = 200;
+                api.response_status = 200;
                 api.response = '<body style="color:navy;background-color:#eee;font: 12pt sans-serif"><h2>API RESPONDER</h2></body>';
                 resolve();
             }
-        },
+        }, 
+
 
         // ----------------------------------------
 
@@ -73,68 +75,37 @@ module.exports = {
         // -----------------------------------------
 
         {
-            endpoint: '/A.pdf',
+            endpoint: '/experiment.js',
             method: 'GET',
             responder: function(api, resolve) {
-                api.filepath = locals.__mockdir('e8255_k00B_me173X_em.pdf');
-                resolve();
-            }
-        },
-
-        // ----------------------------------------
-
-        // reverse proxy with dynamic querystring 
-
-        // -----------------------------------------
-
-
-        {
-            endpoint: '/search',
-            method: 'GET',
-            rproxy: {
-                baseUrl: 'http://content.guardianapis.com',
-                baseQuery: {
-                    'api-key': 'wbyprvxg9ysyyykk3zvh7j8v'
-                }
-            }
-        },
-
-        // ----------------------------------------
-
-        // reverse proxy called from responder
-
-        // -----------------------------------------
-
-
-        {
-            endpoint: '/search1',
-            method: 'GET',
-            responder: function(api, resolve, reject) {
-                api.getProxy(api, {
-                    baseUrl: 'http://content.guardianapis.com',
-                    url: 'search',
-                    baseQuery: {
-                        'api-key': 'wbyprvxg9ysyyykk3zvh7j8v'
-                    }
-                }).then(resolve).catch(reject);
-            }
-        },
-
-        // ----------------------------------------
-
-        // form submit
-
-        // -----------------------------------------
-
-
-        {
-            endpoint: '/submit',
-            responder: function(api, resolve, reject) {
-                api.response = api.body;
+                api.response='';
                 resolve();
             }
         }
 
-
     ]
 };
+
+
+
+/*
+COOKIE get and set
+
+// api.cookies()
+
+object on name value pairs
+
+// api.res.cookie(name,value,options);
+
+options:
+
+domain  String  Domain name for the cookie. Defaults to the domain name of the app.
+expires Date    Expiry date of the cookie in GMT. If not specified or set to 0, creates a session cookie.
+httpOnly    Boolean Flags the cookie to be accessible only by the web server.
+maxAge  String  Convenient option for setting the expiry time relative to the current time in milliseconds.
+path    String  Path for the cookie. Defaults to “/”.
+secure  Boolean Marks the cookie to be used with HTTPS only.
+signed  Boolean Indicates if the cookie should be signed.
+
+
+*/

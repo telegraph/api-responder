@@ -6,15 +6,19 @@
 
 var args = process.argv.slice(2),
     express = require('express'),
-    fs = require("fs"),
+    fs = require("fs-extra"),
     join = require('path').join,
     _ = require("underscore"),
     bodyParser = require('body-parser'),
     multer = require('multer'),
     request = require('request'),
-    Q = require('q'),
+    
     app = module.exports = express(),
     shell = require('shelljs'),
+    cookieParser=require('cookie-parser'),
+    setPort=function(args){
+        return args[0] || process.env.PORT || apiResponder.config.port || 4512;
+    },
     apiPromise,
 
 
@@ -36,6 +40,9 @@ var args = process.argv.slice(2),
                         extended: true
                     }));
                     app.use(multer()); // for parsing multipart/form-data
+
+                    // provides req.cookies
+                    app.use(cookieParser());
 
                     // serve everything in 'public' folder as static files
                     app.use(express.static((typeof apiResponder.config === 'object' && apiResponder.config.public) || 'public'));
@@ -81,7 +88,7 @@ var args = process.argv.slice(2),
                                 config.apis[index],
 
                                 // pass request query string and post body (if any) to responder method
-                                _.pick(req, ['query', 'body', 'params']), {
+                                _.pick(req, ['query', 'body', 'params','cookies']), {
                                     req: req,
                                     res: res
                                 }
@@ -133,6 +140,9 @@ var args = process.argv.slice(2),
                                         res.status(api.response_status).send(file);
                                     });
                                 } else {
+                                    if (api.type){
+                                        res.type(api.type);
+                                    }
                                     res.status(api.response_status).send(api.response);
                                 }
                             }, Math.max(0, api.response_time - timer));
@@ -205,16 +215,19 @@ var args = process.argv.slice(2),
                             api.res.setHeader(attr, value);
                         });
                         api.response = body;
-                        resolve();
+                        resolve(body);
                     }
                 });
             });
         }
     };
 
-apiResponder.port = args[0] || apiResponder.config.port || process.env.port || 4512;
 
+apiResponder.port = setPort(args);
 
+if (require.main === module) {
+    apiResponder.initialize();
+}
 
 
 module.exports = function(listenOn, configFile) {
@@ -228,7 +241,9 @@ module.exports = function(listenOn, configFile) {
             apiResponder.port = parseInt(arg, 10);
             port_set = true;
         }
-        if (typeof arg === 'string') {
+        else if (typeof arg === 'string') {
+
+            // overwrite default config
             apiResponder.config = require(join(__dirname, arg));
         }
 
@@ -236,20 +251,17 @@ module.exports = function(listenOn, configFile) {
             if (arg.port) {
                 apiResponder.port = arg.port;
                 port_set = true;
+
+                // overwrite default config
+                apiResponder.config=arg;
             }
         }
     });
     if (!port_set) {
-        apiResponder.port = args[0] || apiResponder.config.port || process.env.port || 4512;
+        setPort(args);
     }
-    
     apiResponder.initialize();
     return apiResponder;
 
 };
 
-if (require.main === module) {
-    apiResponder.initialize();
-
-
-}
