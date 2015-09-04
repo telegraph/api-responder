@@ -17,7 +17,8 @@ var args = process.argv.slice(2),
     shell = require('shelljs'),
     cookieParser=require('cookie-parser'),
     setPort=function(args){
-        return args[0] || process.env.PORT || apiResponder.config.port || 4512;
+
+        return  process.env.PORT || args[0] || apiResponder.config.port || 4512;
     },
     apiPromise,
 
@@ -225,9 +226,10 @@ var args = process.argv.slice(2),
     };
 
 
-apiResponder.port = setPort(args);
+
 
 if (require.main === module) {
+    apiResponder.port = setPort(args);
     apiResponder.initialize();
 }
 
@@ -259,8 +261,12 @@ module.exports = function(listenOn, configFile) {
             }
         }
     });
+    if (process.env.PORT){
+         apiResponder.port = process.env.PORT;
+         port_set=true;
+    }
     if (!port_set) {
-        setPort(args);
+        apiResponder.port = setPort(args);
     }
     apiResponder.initialize();
     return apiResponder;
