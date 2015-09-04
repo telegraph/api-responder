@@ -10,7 +10,7 @@ var args = process.argv.slice(2),
     join = require('path').join,
     _ = require("underscore"),
     bodyParser = require('body-parser'),
-    multer = require('multer'),
+    // multer = require('multer'),
     request = require('request'),
     
     app = module.exports = express(),
