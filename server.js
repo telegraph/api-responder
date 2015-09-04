@@ -40,7 +40,7 @@ var args = process.argv.slice(2),
                         limit: '50mb',
                         extended: true
                     }));
-                    app.use(multer()); // for parsing multipart/form-data
+                   // app.use(multer()); // for parsing multipart/form-data
 
                     // provides req.cookies
                     app.use(cookieParser());
