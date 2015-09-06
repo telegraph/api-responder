@@ -48,11 +48,11 @@ var args = process.argv.slice(2),
                     // serve everything in 'public' folder as static files
                     app.use(express.static((typeof apiResponder.config === 'object' && apiResponder.config.public) || 'public'));
                     app.listen(port, '0.0.0.0', function() {
-                        console.log("Responder listening on port %d", port);
+                        console.log("[api-responder router] Responder listening on port %d", port);
                         apiResponder.initializeController();
                     });
                 };
-
+                
             // check if port alreay in use
             if (!process.env.PORT && !process.env.port) {
 
@@ -61,25 +61,28 @@ var args = process.argv.slice(2),
                     if (output.split('\n').length > 1) {
                         pid = output.split("\n")[1].replace(/\s+/g, "|").split("|")[1];
                         kill = shell.exec('kill -9 ' + pid, function() {
-                            console.log('Killing process ' + pid + ' already usng port ' + port);
+                            console.log('api-responder router] Killing process ' + pid + ' already usng port ' + port);
                             listen();
                         });
                     } else {
+                        // console.log('api-responder router] port '+port+' available');
                         listen();
                     }
                 });
+            } else {
+                listen();
             }
         },
 
         initializeController: function() {
             var config = apiResponder.config;
             if (config.apis.length) {
-                console.log(config.apis.length ? 'Initialising responses:' : 'No responses defined yet');
+                console.log('api-responder router] '+(config.apis.length ? 'Initialising responses:' : 'No responses defined yet'));
             }
 
             // add a router for each api response in config
             _.each(config.apis, function(route, index) {
-                console.log('  ' + (index + 1) + '. ' + (route.method || config.defaults.method) + ' ' + route.endpoint);
+                console.log('  api-responder router]' + (index + 1) + '. ' + (route.method || config.defaults.method) + ' ' + route.endpoint);
                 var method = (route.method || config.defaults.method).toLowerCase();
 
                 // eg app.get('/webapi/api/v1/client/leadData',function(){ ... })
@@ -264,6 +267,7 @@ module.exports = function(listenOn, configFile) {
             }
         }
     });
+    
 
     // give precendece to process.env.port in hosted environments
     if (process.env.PORT || process.env.port) {
@@ -273,6 +277,7 @@ module.exports = function(listenOn, configFile) {
     if (!port_set) {
         apiResponder.port = setPort(args);
     }
+    
     apiResponder.initialize();
     return apiResponder;
 
