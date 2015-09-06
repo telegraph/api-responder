@@ -12,13 +12,13 @@ var args = process.argv.slice(2),
     bodyParser = require('body-parser'),
     // multer = require('multer'),
     request = require('request'),
-    
+
     app = module.exports = express(),
     shell = require('shelljs'),
-    cookieParser=require('cookie-parser'),
-    setPort=function(args){
+    cookieParser = require('cookie-parser'),
+    setPort = function(args) {
 
-        return  process.env.PORT || args[0] || apiResponder.config.port || 4512;
+        return process.env.PORT || process.env.port || args[0] || apiResponder.config.port || 4512;
     },
     apiPromise,
 
@@ -40,7 +40,7 @@ var args = process.argv.slice(2),
                         limit: '50mb',
                         extended: true
                     }));
-                   // app.use(multer()); // for parsing multipart/form-data
+                    // app.use(multer()); // for parsing multipart/form-data
 
                     // provides req.cookies
                     app.use(cookieParser());
@@ -54,17 +54,21 @@ var args = process.argv.slice(2),
                 };
 
             // check if port alreay in use
-            lsof = shell.exec('lsof -i :' + port, function(id, output) {
-                if (output.split('\n').length > 1) {
-                    pid = output.split("\n")[1].replace(/\s+/g, "|").split("|")[1];
-                    kill = shell.exec('kill -9 ' + pid, function() {
-                        console.log('Killing process ' + pid + ' already usng port ' + port);
+            if (!process.env.PORT && !process.env.port) {
+
+                // don't check in hosted environment
+                lsof = shell.exec('lsof -i :' + port, function(id, output) {
+                    if (output.split('\n').length > 1) {
+                        pid = output.split("\n")[1].replace(/\s+/g, "|").split("|")[1];
+                        kill = shell.exec('kill -9 ' + pid, function() {
+                            console.log('Killing process ' + pid + ' already usng port ' + port);
+                            listen();
+                        });
+                    } else {
                         listen();
-                    });
-                } else {
-                    listen();
-                }
-            });
+                    }
+                });
+            }
         },
 
         initializeController: function() {
@@ -89,7 +93,7 @@ var args = process.argv.slice(2),
                                 config.apis[index],
 
                                 // pass request query string and post body (if any) to responder method
-                                _.pick(req, ['query', 'body', 'params','cookies']), {
+                                _.pick(req, ['query', 'body', 'params', 'cookies']), {
                                     req: req,
                                     res: res
                                 }
@@ -111,8 +115,8 @@ var args = process.argv.slice(2),
                             });
 
                         apiPromise.then(function(response) {
-                            if(response!==undefined){
-                                api.response=response;
+                            if (response !== undefined) {
+                                api.response = response;
                             }
                             timer = new Date().getTime() - timer;
                             setTimeout(function() {
@@ -143,7 +147,7 @@ var args = process.argv.slice(2),
                                         res.status(api.response_status).send(file);
                                     });
                                 } else {
-                                    if (api.type){
+                                    if (api.type) {
                                         res.type(api.type);
                                     }
                                     res.status(api.response_status).send(api.response);
@@ -191,7 +195,7 @@ var args = process.argv.slice(2),
                 if (rproxy.method === 'POST') {
                     if (api.req.headers['content-type'] === 'application/x-www-form-urlencoded') {
                         rproxy.form = api.req.body;
-                        
+
                     }
                     /*  // multipart
                     else if (api.req.headers['content-type'] === 'multipart/form-data') {
@@ -244,8 +248,7 @@ module.exports = function(listenOn, configFile) {
         if (!isNaN(parseInt(arg, 10))) {
             apiResponder.port = parseInt(arg, 10);
             port_set = true;
-        }
-        else if (typeof arg === 'string') {
+        } else if (typeof arg === 'string') {
 
             // overwrite default config
             apiResponder.config = require(join(__dirname, arg));
@@ -257,13 +260,15 @@ module.exports = function(listenOn, configFile) {
                 port_set = true;
 
                 // overwrite default config
-                apiResponder.config=arg;
+                apiResponder.config = arg;
             }
         }
     });
-    if (process.env.PORT){
-         apiResponder.port = process.env.PORT;
-         port_set=true;
+
+    // give precendece to process.env.port in hosted environments
+    if (process.env.PORT || process.env.port) {
+        apiResponder.port = process.env.PORT || process.env.port;
+        port_set = true;
     }
     if (!port_set) {
         apiResponder.port = setPort(args);
@@ -272,4 +277,3 @@ module.exports = function(listenOn, configFile) {
     return apiResponder;
 
 };
-
