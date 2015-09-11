@@ -262,9 +262,11 @@ module.exports = function(listenOn, configFile) {
                 apiResponder.port = arg.port;
                 port_set = true;
 
-                // overwrite default config
-                apiResponder.config = arg;
+               
             }
+            
+            // overwrite default config
+            apiResponder.config = arg;
         }
     });
     
