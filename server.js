@@ -4,22 +4,21 @@
 // usage: > node server PPPP  relative-path-to-config
 //  PPPP is prefered port  path-to-config optional
 
+'use strict';
+
+
 var args = process.argv.slice(2),
     express = require('express'),
-    fs = require("fs-extra"),
+    fs = require('fs-extra'),
     join = require('path').join,
-    _ = require("underscore"),
+    _ = require('underscore'),
     bodyParser = require('body-parser'),
-    // multer = require('multer'),
     request = require('request'),
 
     app = module.exports = express(),
     shell = require('shelljs'),
     cookieParser = require('cookie-parser'),
-    setPort = function(args) {
 
-        return process.env.PORT || process.env.port || args[0] || apiResponder.config.port || 4512;
-    },
     apiPromise,
 
 
@@ -32,6 +31,7 @@ var args = process.argv.slice(2),
         initialize: function() {
             var lsof, port = apiResponder.port,
                 listen = function() {
+
                     // allow posts up to 50MB in size
                     app.use(bodyParser.json({
                         limit: '50mb'
@@ -48,19 +48,19 @@ var args = process.argv.slice(2),
                     // serve everything in 'public' folder as static files
                     app.use(express.static((typeof apiResponder.config === 'object' && apiResponder.config.public) || 'public'));
                     app.listen(port, '0.0.0.0', function() {
-                        console.log('[router] Responder listening on port ' + port+'  Initialising responses');
+                        console.log('[router] Responder listening on port ' + port + '  Initialising responses');
                         apiResponder.initializeController();
                     });
                 };
-                
+
             // check if port alreay in use
             if (!process.env.PORT && !process.env.port) {
 
                 // don't check in hosted environment
                 lsof = shell.exec('lsof -i :' + port, function(id, output) {
                     if (output.split('\n').length > 1) {
-                        pid = output.split("\n")[1].replace(/\s+/g, "|").split("|")[1];
-                        kill = shell.exec('kill -9 ' + pid, function() {
+                        var pid = output.split('\n')[1].replace(/\s+/g, '|').split('|')[1];
+                        shell.exec('kill -9 ' + pid, function() {
                             console.log('[router] Killing process ' + pid + ' already usng port ' + port);
                             listen();
                         });
@@ -127,8 +127,8 @@ var args = process.argv.slice(2),
                                 // send the response
                                 // add CORS header to allow cross-domain access to responder
                                 if (api.CORS) {
-                                    res.header("Access-Control-Allow-Origin", "*");
-                                    res.header("Access-Control-Allow-Headers", "Origin, X-Requested-With, Content-Type, Accept");
+                                    res.header('Access-Control-Allow-Origin', '*');
+                                    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
                                 }
 
                                 // if response is a file the api-config should set api.type and api.filepath
@@ -230,10 +230,60 @@ var args = process.argv.slice(2),
                 });
             });
         }
+    },
+    setPort = function(args) {
+
+        return process.env.PORT || process.env.port || args[0] || apiResponder.config.port || 4512;
+    },
+
+
+
+
+    exports = function() {
+
+        /* arguments: ([listenOn], [configFile])*/
+        var port_set;
+        _(arguments).each(function(arg) {
+            if (typeof arg === 'number') {
+                port_set = true;
+                apiResponder.port = arg;
+            }
+            if (!isNaN(parseInt(arg, 10))) {
+                apiResponder.port = parseInt(arg, 10);
+                port_set = true;
+            } else if (typeof arg === 'string') {
+
+                // overwrite default config
+                apiResponder.config = require(join(__dirname, arg));
+            }
+
+            if (arg && typeof arg === 'object') {
+                if (arg.port) {
+                    apiResponder.port = arg.port;
+                    port_set = true;
+                }
+
+                // overwrite default config
+                apiResponder.config = arg;
+            }
+        });
+
+
+        // give precendece to process.env.port in hosted environments
+        if (process.env.PORT || process.env.port) {
+            apiResponder.port = process.env.PORT || process.env.port;
+            port_set = true;
+        }
+        if (!port_set) {
+            apiResponder.port = setPort(args);
+        }
+
+        apiResponder.initialize();
+        console.log(apiResponder.getReverseProxy, 284);
+
+        return apiResponder;
+
     };
-
-
-
 
 if (require.main === module) {
     apiResponder.port = setPort(args);
@@ -241,46 +291,5 @@ if (require.main === module) {
 }
 
 
-module.exports = function(listenOn, configFile) {
-    var port_set;
-    _(arguments).each(function(arg) {
-        if (typeof arg === 'number') {
-            port_set = true;
-            apiResponder.port = arg;
-        }
-        if (!isNaN(parseInt(arg, 10))) {
-            apiResponder.port = parseInt(arg, 10);
-            port_set = true;
-        } else if (typeof arg === 'string') {
-
-            // overwrite default config
-            apiResponder.config = require(join(__dirname, arg));
-        }
-
-        if (arg && typeof arg === 'object') {
-            if (arg.port) {
-                apiResponder.port = arg.port;
-                port_set = true;
-
-               
-            }
-            
-            // overwrite default config
-            apiResponder.config = arg;
-        }
-    });
-    
-
-    // give precendece to process.env.port in hosted environments
-    if (process.env.PORT || process.env.port) {
-        apiResponder.port = process.env.PORT || process.env.port;
-        port_set = true;
-    }
-    if (!port_set) {
-        apiResponder.port = setPort(args);
-    }
-    
-    apiResponder.initialize();
-    return apiResponder;
-
-};
+exports.getReverseProxy = apiResponder.getReverseProxy;
+module.exports = exports;
