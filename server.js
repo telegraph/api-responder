@@ -19,11 +19,6 @@ var args = process.argv.slice(2),
     shell = require('shelljs'),
     cookieParser = require('cookie-parser'),
 
-    apiPromise,
-
-
-
-
     // api is passed in by reference and so is updated by this method
     apiResponder = {
         config: require(join(__dirname, args[1] || 'api-config.js')),
@@ -73,6 +68,85 @@ var args = process.argv.slice(2),
                 listen();
             }
         },
+        responder: function(route, req, res) {
+
+
+            // add in default values
+            var apiPromise, timer = new Date().getTime(),
+                api = _.extend(
+                    _.clone(apiResponder.config.defaults),
+                    route,
+
+                    // pass request query string and post body (if any) to responder method
+                    _.pick(req, ['query', 'body', 'params', 'cookies']), {
+                        req: req,
+                        res: res
+                    }
+                );
+
+            // run the api.responder method (sets api.response and may amend api.response_status)
+            // or apply the reverse proxy specification to 'request'
+            apiPromise = typeof api.rproxy === 'object' ? apiResponder.getReverseProxy(api) :
+                new Promise(function(resolve, reject) {
+
+                    // allow api responders to use the getProxy syntax
+                    // by passing reference to it
+                    // api.getReverseProxy = apiResponder.getReverseProxy;
+                    try {
+                        api.responder.apply(this, [api, resolve, reject]);
+                    } catch (e) {
+                        reject(e);
+                    }
+                });
+
+            apiPromise.then(function(response) {
+                if (response !== undefined) {
+                    api.response = response;
+                }
+                timer = new Date().getTime() - timer;
+                setTimeout(function() {
+
+                    // send the response
+                    // add CORS header to allow cross-domain access to responder
+                    if (api.CORS) {
+                        res.header('Access-Control-Allow-Origin', '*');
+                        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
+                    }
+
+                    // if response is a file the api-config should set api.type and api.filepath
+                    // corresponding to requested file 
+                    if (api.filepath) {
+                        if (!api.type && api.filepath.lastIndexOf('.') !== -1) {
+                            api.type = api.filepath.substr(api.filepath.lastIndexOf('.') + 1);
+                        }
+                        fs.readFile(api.filepath, function(err, file) {
+
+                            // sets mime-type
+                            res.type(api.type);
+                            if (api.attachment) {
+
+                                // sets content disposition and mime-type
+                                // eg Content-Disposition: attachment; filename="xxx.pdf"
+                                res.attachment(api.filepath);
+                            }
+                            res.status(api.response_status).send(file);
+                        });
+                    } else {
+                        if (api.type) {
+                            res.type(api.type);
+                        }
+                        res.status(api.response_status).send(api.response);
+                    }
+                }, Math.max(0, api.response_time - timer));
+            }).catch(function(err) {
+                if (typeof api.error_responder === 'function') {
+                    api.error_responder();
+                    res.status(api.response_status).send(api.error_response);
+                } else {
+                    res.status(500).send(err.toString() || '');
+                }
+            });
+        },
 
         initializeController: function() {
             var config = apiResponder.config;
@@ -86,85 +160,15 @@ var args = process.argv.slice(2),
                 var method = (route.method || config.defaults.method).toLowerCase();
 
                 // eg app.get('/webapi/api/v1/client/leadData',function(){ ... })
-                app[method](route.endpoint,
-                    function(req, res) {
-
-                        // add in default values
-                        var timer = new Date().getTime(),
-                            api = _.extend(
-                                _.clone(config.defaults),
-                                config.apis[index],
-
-                                // pass request query string and post body (if any) to responder method
-                                _.pick(req, ['query', 'body', 'params', 'cookies']), {
-                                    req: req,
-                                    res: res
-                                }
-                            );
-
-                        // run the api.responder method (sets api.response and may amend api.response_status)
-                        // or apply the reverse proxy specification to 'request'
-                        apiPromise = typeof api.rproxy === 'object' ? apiResponder.getReverseProxy(api) :
-                            new Promise(function(resolve, reject) {
-
-                                // allow api responders to use the getProxy syntax
-                                // by passing reference to it
-                                api.getReverseProxy = apiResponder.getReverseProxy;
-                                try {
-                                    api.responder.apply(this, [api, resolve, reject]);
-                                } catch (e) {
-                                    reject(e);
-                                }
-                            });
-
-                        apiPromise.then(function(response) {
-                            if (response !== undefined) {
-                                api.response = response;
-                            }
-                            timer = new Date().getTime() - timer;
-                            setTimeout(function() {
-
-                                // send the response
-                                // add CORS header to allow cross-domain access to responder
-                                if (api.CORS) {
-                                    res.header('Access-Control-Allow-Origin', '*');
-                                    res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-                                }
-
-                                // if response is a file the api-config should set api.type and api.filepath
-                                // corresponding to requested file 
-                                if (api.filepath) {
-                                    if (!api.type && api.filepath.lastIndexOf('.') !== -1) {
-                                        api.type = api.filepath.substr(api.filepath.lastIndexOf('.') + 1);
-                                    }
-                                    fs.readFile(api.filepath, function(err, file) {
-
-                                        // sets mime-type
-                                        res.type(api.type);
-                                        if (api.attachment) {
-
-                                            // sets content disposition and mime-type
-                                            // eg Content-Disposition: attachment; filename="xxx.pdf"
-                                            res.attachment(api.filepath);
-                                        }
-                                        res.status(api.response_status).send(file);
-                                    });
-                                } else {
-                                    if (api.type) {
-                                        res.type(api.type);
-                                    }
-                                    res.status(api.response_status).send(api.response);
-                                }
-                            }, Math.max(0, api.response_time - timer));
-                        }).catch(function(err) {
-                            if (typeof api.error_responder === 'function') {
-                                api.error_responder();
-                                res.status(api.response_status).send(api.error_response);
-                            } else {
-                                res.status(500).send(err.toString() || '');
-                            }
-                        });
+                if (route.middleware) {
+                    app[method](route.endpoint, route.middleware, function(req, res) {
+                        apiResponder.responder(route, req, res);
                     });
+                } else {
+                    app[method](route.endpoint, function(req, res) {
+                        apiResponder.responder(route, req, res);
+                    });
+                }
             });
         },
 
@@ -235,10 +239,6 @@ var args = process.argv.slice(2),
 
         return process.env.PORT || process.env.port || args[0] || apiResponder.config.port || 4512;
     },
-
-
-
-
     exports = function() {
 
         /* arguments: ([listenOn], [configFile])*/
@@ -290,6 +290,7 @@ if (require.main === module) {
     apiResponder.initialize();
 }
 
-
+// export the app and getReverseProxy method as well as the initialiser.
+exports.app = app;
 exports.getReverseProxy = apiResponder.getReverseProxy;
 module.exports = exports;
