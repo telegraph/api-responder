@@ -279,7 +279,7 @@ var args = process.argv.slice(2),
         }
 
         apiResponder.initialize();
-        console.log(apiResponder.getReverseProxy, 284);
+
 
         return apiResponder;
 
