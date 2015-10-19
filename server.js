@@ -290,6 +290,11 @@ if (require.main === module) {
     apiResponder.initialize();
 }
 
+exports.addPublic = function(path) {
+    app.use(express.static(path));
+
+};
+
 // export the app and getReverseProxy method as well as the initialiser.
 exports.app = app;
 exports.getReverseProxy = apiResponder.getReverseProxy;
