@@ -7,8 +7,8 @@
         "type": "git",
         "url": ""
     },
-    "description": "provides realistic mocked API responses for web apps",
-    "version": "0.1.0",
+    "description": "Provides easy-config express server, web services and realistic API responses during development for web apps",
+    "version": "0.1.1",
     "main": "server.js",
     "dependencies": {
         "express": ">=4.0.0",
@@ -24,12 +24,6 @@
     "devDependencies": {},
     "readmeFilename": "README.md",
     "scripts": {
-        "start": "node server.js"
-    },
-    "gitHead": "4ca190ec8d4e6e5ef9ba3febfb23e66cf5af500a",
-    "readme": "# api-responder\n\n\n<blockquote><strong>Create complete sets of mock api-responses for projects using easy-to-create config spec.</strong></blockquote>\n\n## Basics\n\n### installation\n\n\n```\n \t$ npm install ingenious/api-responder\n\n \n ```    \n\n### api-responder API\n\n\n          \n",
-    "_id": "api-responder@0.0.7",
-    "_shasum": "937dba90187cf5978ad23061c62261ec878aa8da",
-    "_from": "ingenious/api-responder",
-    "_resolved": "git://github.com/ingenious/api-responder.git#4ca190ec8d4e6e5ef9ba3febfb23e66cf5af500a"
+        "start": "node server,js"
+    }
 }

@@ -14,6 +14,7 @@ var args = process.argv.slice(2),
     _ = require('underscore'),
     bodyParser = require('body-parser'),
     request = require('request'),
+    platform = require('os').platform(),
 
     app = module.exports = express(),
     shell = require('shelljs'),
@@ -49,16 +50,26 @@ var args = process.argv.slice(2),
                 };
 
             // check if port alreay in use
-            if (!process.env.PORT && !process.env.port) {
-
-                // don't check in hosted environment
+            // don't check in hosted environment or Windows
+            if (!process.env.PORT && !process.env.port && (platform === 'darwin' || platform === 'linux')) {
                 lsof = shell.exec('lsof -i :' + port, function(id, output) {
+
+                    // if a 'node' process is already using requested port, kill process
                     if (output.split('\n').length > 1) {
-                        var pid = output.split('\n')[1].replace(/\s+/g, '|').split('|')[1];
-                        shell.exec('kill -9 ' + pid, function() {
-                            console.log('[router] Killing process ' + pid + ' already usng port ' + port);
-                            listen();
+                        var listening = false;
+                        _.each(output.split('\n'), function(line) {
+                            if (!listening && line && line.substr(0, 4) === 'node') {
+                                listening = true;
+                                var pid = line.replace(/\s+/g, '|').split('|')[1];
+                                shell.exec('kill -9 ' + pid, function() {
+                                    console.log('[router] Killing process ' + pid + ' already usng port ' + port);
+                                    listen();
+                                });
+                            }
                         });
+                        if (!listening) {
+                            listen();
+                        }
                     } else {
                         // console.log('router] port '+port+' available');
                         listen();
