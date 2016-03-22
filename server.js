@@ -1,4 +1,4 @@
-// api-reponder ver 0.3
+// api-reponder ver 0.31
 // Stephen Giles
 
 // usage: > node server PPPP  relative-path-to-config
@@ -16,7 +16,8 @@ var args = process.argv.slice(2),
     request = require('request'),
     platform = require('os').platform(),
 
-    app = module.exports = express(),
+    app = express(),
+    server = require('http').Server(app),
     shell = require('shelljs'),
     cookieParser = require('cookie-parser'),
 
@@ -42,8 +43,11 @@ var args = process.argv.slice(2),
                     app.use(cookieParser());
 
                     // serve everything in 'public' folder as static files
-                    app.use(express.static((typeof apiResponder.config === 'object' && apiResponder.config.public) || 'public'));
-                    app.listen(port, '0.0.0.0', function() {
+                    app.use(express.static(
+                        (typeof apiResponder.config === 'object' && apiResponder.config.public) ||
+                        'public'
+                    ));
+                    server.listen(port, '0.0.0.0', function() {
                         console.log('[router] Responder listening on port ' + port + '  Initialising responses');
                         apiResponder.initializeController();
                     });
@@ -279,7 +283,6 @@ var args = process.argv.slice(2),
             }
         });
 
-
         // give precendece to process.env.port in hosted environments
         if (process.env.PORT || process.env.port) {
             apiResponder.port = process.env.PORT || process.env.port;
@@ -288,10 +291,7 @@ var args = process.argv.slice(2),
         if (!port_set) {
             apiResponder.port = setPort(args);
         }
-
         apiResponder.initialize();
-
-
         return apiResponder;
 
     };
@@ -300,13 +300,11 @@ if (require.main === module) {
     apiResponder.port = setPort(args);
     apiResponder.initialize();
 }
-
+// export the app and getReverseProxy method as well as the initialiser.
 exports.addPublic = function(path) {
     app.use(express.static(path));
-
 };
-
-// export the app and getReverseProxy method as well as the initialiser.
 exports.app = app;
+exports.server = server;
 exports.getReverseProxy = apiResponder.getReverseProxy;
 module.exports = exports;
