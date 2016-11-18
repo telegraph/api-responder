@@ -1,8 +1,8 @@
-// api-reponder ver 0.31
+// api-reponder ver 0.32
 // Stephen Giles
 
 // usage: > node server PPPP  relative-path-to-config
-//  PPPP is prefered port  path-to-config optional
+//  PPPP is prefered port  path-to-config is optional
 
 'use strict';
 
@@ -20,11 +20,25 @@ var args = process.argv.slice(2),
     server = require('http').Server(app),
     shell = require('shelljs'),
     cookieParser = require('cookie-parser'),
+    config = 'api-config.js';
 
-    // api is passed in by reference and so is updated by this method
-    apiResponder = {
-        config: require(join(__dirname, args[1] || 'api-config.js')),
+// allow a config to be specified on the command line in second argument
+if (args[1] && args[1].indexOf('-') !== -1) {
+    fs.access(join(__dirname, args[1]), fs.F_OK, function(err) {
+        if (!err) {
+            config = require(join(__dirname, args[1]));
+        } 
+    });
 
+}
+
+
+
+
+
+// api is passed in by reference and so is updated by this method
+var apiResponder = {
+        config: config,
         initialize: function() {
             var lsof, port = apiResponder.port,
                 listen = function() {
