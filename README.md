@@ -1,7 +1,7 @@
 # api-responder
 
 
-<blockquote><strong>Create complete sets of mock api-responses for projects using easy-to-create config spec.</strong></blockquote>
+<blockquote><strong>Quickly create API endpoints using yield for async operations</strong></blockquote>
 
 ## Basics
 
@@ -9,7 +9,7 @@
 
 
 ```
- 	$ npm install ingenious/api-responder
+ 	$ npm install api-responder
 
  
  ```    
