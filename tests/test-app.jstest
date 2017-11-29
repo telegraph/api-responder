@@ -1,0 +1,45 @@
+let apiResponder = require('../server.js'),
+  am = require('async-methods')
+
+let app = apiResponder({
+  port: 8081,
+  public: 'tests/public',
+  apis: [
+    {
+      endpoint: '/test',
+      responder: function(api, resolve) {
+        resolve({ test: 67 })
+      }
+    },
+    {
+      endpoint: '/reject',
+      responder: function(api, resolve, reject) {
+        reject({ error: 667 })
+      }
+    },
+    {
+      endpoint: '/gen',
+      responder: function*() {
+        let state = this
+        return yield am({ gen: 98 })
+      }
+    },
+    {
+      endpoint: '/throw',
+      responder: function*() {
+        let state = this
+        throw { error: 67 }
+        return yield am({ test: 98 })
+      }
+    },
+    {
+      endpoint: '/html',
+      responder: function*() {
+        let state = this
+        return yield Promise.resolve(
+          '<html><body style="font-family:sans-serif"><h1>html</h1></body></html>'
+        )
+      }
+    }
+  ]
+})

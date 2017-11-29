@@ -1,324 +1,340 @@
-// api-reponder ver 0.32
-// Stephen Giles
+'use strict'
 
-// usage: > node server PPPP  relative-path-to-config
-//  PPPP is prefered port  path-to-config is optional
+let args = process.argv.slice(2),
+  express = require('express'),
+  fs = require('fs-extra'),
+  am = require('async-methods'),
+  join = require('path').join,
+  bodyParser = require('body-parser'),
+  platform = require('os').platform(),
+  shell = require('shelljs'),
+  cookieParser = require('cookie-parser'),
+  axios = require('axios'),
+  defaultConfig = {
+    port: 8081,
+    defaults: {
+      response_status: 200,
+      method: 'GET',
+      attachment: false,
+      filename: '',
+      type: '',
+      CORS: true
+    },
+    public: 'public',
+    apis: []
+  }
 
-'use strict';
+class ApiResponder {
+  constructor(config, port, app, staticFolder) {
+    let self = this
+    this.config =
+      typeof config === 'string'
+        ? require(join(__dirname, config))
+        : typeof config === 'object' ? config : defaultConfig
+    this.config.defaults = this.config.defaults || {}
+    for (var attr in defaultConfig.defaults) {
+      if (this.config.defaults[attr] === undefined) {
+        this.config.defaults[attr] = defaultConfig.defaults[attr]
+      }
+    }
+    this.setPort(port)
+    if (staticFolder) {
+      this.config.public = staticFolder
+    }
+    // start server or route only
 
+    let apiResponder = am(function(cb) {
+      if (!app) {
+        self.initServer(cb)
+      } else {
+        self.app = app
+        self.initRouter(cb)
+      }
+    })
+    this.then = fn => apiResponder.then(fn)
+    this.catch = fn => apiResponder.catch(fn)
+    return self
+  }
 
-var args = process.argv.slice(2),
-    express = require('express'),
-    fs = require('fs-extra'),
-    join = require('path').join,
-    _ = require('underscore'),
-    bodyParser = require('body-parser'),
-    request = require('request'),
-    platform = require('os').platform(),
+  initServer(cb) {
+    let self = this,
+      app = (self.app = express())
+    self.server = require('http').Server(self.app)
+    var lsof,
+      port = self.port,
+      listen = function() {
+        // allow posts up to 50MB in size
+        app.use(
+          bodyParser.json({
+            limit: '50mb'
+          })
+        )
+        app.use(
+          bodyParser.urlencoded({
+            limit: '50mb',
+            extended: true
+          })
+        )
 
-    app = express(),
-    server = require('http').Server(app),
-    shell = require('shelljs'),
-    cookieParser = require('cookie-parser'),
-    config = 'api-config.js';
+        // provides req.cookies
+        app.use(cookieParser())
 
-// allow a config to be specified on the command line in second argument
-if (args[1] && args[1].indexOf('-') !== -1) {
-    fs.access(join(__dirname, args[1]), fs.F_OK, function(err) {
-        if (!err) {
-            config = require(join(__dirname, args[1]));
-        } 
-    });
+        // serve everything in 'public' folder as static files
+        let staticFolder = (typeof self.config === 'object' && self.config.public) || 'public'
+        app.use(express.static(staticFolder))
+        self.server.listen(port, '0.0.0.0', function() {
+          console.log('    [router] Responder listening on port ' + port)
+          console.log('    [router] Static files in ' + join(__dirname, staticFolder))
+          console.log()
+          self.initRouter(cb)
+          console.log()
+        })
+      }
 
+    // check if port alreay in use
+    // don't check in hosted environment or Windows
+    if (!process.env.PORT && !process.env.port && (platform === 'darwin' || platform === 'linux')) {
+      lsof = shell.exec('lsof -i :' + port, function(id, output) {
+        // if a 'node' process is already using requested port, kill process
+        if (output.split('\n').length > 1) {
+          var listening = false
+          output.split('\n').forEach(function(line) {
+            if (!listening && line && line.substr(0, 4) === 'node') {
+              listening = true
+              var pid = line.replace(/\s+/g, '|').split('|')[1]
+              shell.exec('kill -9 ' + pid, function() {
+                console.log('[router] Killing process ' + pid + ' already usng port ' + port)
+                listen()
+              })
+            }
+          })
+          if (!listening) {
+            listen()
+          }
+        } else {
+          listen()
+        }
+      })
+    } else {
+      listen()
+    }
+  }
+
+  initRouter(cb) {
+    let self = this,
+      config = this.config,
+      app = this.app
+
+    if (!config.apis.length) {
+      console.log('[router] No endpoints defined yet')
+    }
+
+    // add a route for each api response in config
+    config.apis.forEach(function(endpointConfig, index) {
+      console.log(
+        '     ' +
+          (index + 1) +
+          '. ' +
+          (endpointConfig.method || config.defaults.method) +
+          ' ' +
+          endpointConfig.endpoint
+      )
+      var method = (endpointConfig.method || config.defaults.method).toLowerCase()
+      if (endpointConfig.middleware) {
+        app[method](endpointConfig.endpoint, endpointConfig.middleware, function(req, res) {
+          self.responder(endpointConfig, req, res)
+        })
+      } else {
+        app[method](endpointConfig.endpoint, function(req, res) {
+          // pass route to responder
+          self.responder(endpointConfig, req, res)
+        })
+      }
+    })
+    cb(null, {
+      server: self.server,
+      app: self.app,
+      config: self.config
+    })
+  }
+  rproxy(api) {
+    let config =
+      typeof api.rproxy === 'function'
+        ? api.rproxy(api)
+        : typeof api.rproxy === 'string' ? { url: api.rproxy } : api.rproxy
+    config.headers = config.headers || {}
+    config.params = config.params || {}
+    config.method = config.method || api.req.method
+
+    for (var attr in api.req.headers) {
+      if (attr !== 'host' && attr !== '') {
+        config.headers[attr] = api.req.headers[attr]
+      }
+    }
+    for (var attr in api.req.query) {
+      config.params[attr] = api.req.query[attr]
+    }
+    if (api.body) {
+      config.data = api.body
+    }
+    return am(axios(config))
+      .next(response => {
+        api.response_status = response.status
+        if (api.transformResponse) {
+          if (am.isGenerator(api.transformResponse)) {
+            return am(api.transformResponse, response.data)
+          } else {
+            return api.transformResponse(response.data)
+          }
+        } else {
+          return response.data
+        }
+      })
+      .error(err => {
+        api.res.statusMessage = err.response.statusText
+        api.res.response_status = err.response.statusText
+        return err.response.data
+      })
+  }
+  responder(endpointConfig, req, res) {
+    var api,
+      self = this,
+      timer = new Date().getTime(),
+      api = { req: req, res: res }
+    for (var attr in self.config.defaults) {
+      api[attr] = self.config.defaults[attr]
+    }
+
+    // endpoint routes can overide default
+    for (attr in endpointConfig) {
+      api[attr] = endpointConfig[attr]
+    }
+    ;['query', 'body', 'params', 'cookies'].forEach(attr => {
+      api[attr] = req[attr]
+    })
+    am(
+      new Promise(function(resolve, reject) {
+        try {
+          if (api.rproxy) {
+            self
+              .rproxy(api)
+              .then(resolve)
+              .catch(reject)
+          } else if (am.isGenerator(api.responder)) {
+            am(api.responder.apply(api))
+              .then(resolve)
+              .catch(reject)
+          } else {
+            api.responder.apply(this, [api, resolve, reject])
+          }
+        } catch (e) {
+          reject(e)
+        }
+      })
+    )
+      .next(response => {
+        if (response !== undefined) {
+          api.response = response
+        }
+
+        timer = new Date().getTime() - timer
+
+        // send the response
+        if (api.CORS) {
+          res.header('Access-Control-Allow-Origin', '*')
+          res.header(
+            'Access-Control-Allow-Headers',
+            'Origin, X-Requested-With, Content-Type, Accept'
+          )
+        }
+        // if response is a file the api-config should set api.type and api.filepath
+        // corresponding to requested file
+        if (api.filepath) {
+          if (!api.type && api.filepath.lastIndexOf('.') !== -1) {
+            api.type = api.filepath.substr(api.filepath.lastIndexOf('.') + 1)
+          }
+          fs.readFile(api.filepath, function(err, file) {
+            // sets mime-type
+            res.type(api.type)
+            if (api.attachment) {
+              // sets content disposition and mime-type
+              // eg Content-Disposition: attachment filename="xxx.pdf"
+              res.attachment(api.filepath)
+            }
+            res.status(api.response_status).send(file)
+          })
+          return
+        }
+        // send the response
+        if (typeof api.response === 'object') {
+          res.type(api.type || 'application/json')
+        } else if (api.type) {
+          res.type(api.type)
+        }
+
+        res.status(api.response_status).send(api.response)
+      })
+      .error(err => {
+        res.status(500).send(err)
+      })
+  }
+  setPort(port) {
+    port = port || null
+    this.config.port = this.port =
+      process.env.PORT || process.env.port || port || this.config.port || 8081
+  }
+  static parseArgsAndInit(args) {
+    let port, app, config, staticFolder
+
+    try {
+      args.forEach((arg, i) => {
+        if ((arg.indexOf('-config') === 0 || arg.indexOf('--config') === 0) && args[i + 1]) {
+          config = args[i + 1]
+        }
+        if ((arg.indexOf('-port') === 0 || arg.indexOf('--port') === 0) && args[i + 1]) {
+          port = args[i + 1]
+        }
+        if ((arg.indexOf('-public') === 0 || arg.indexOf('--public') === 0) && args[i + 1]) {
+          staticFolder = args[i + 1]
+        }
+      })
+    } catch (e) {}
+
+    let apiResponder = new ApiResponder(config, port, app, staticFolder)
+  }
 }
 
-
-
-
-
-// api is passed in by reference and so is updated by this method
-var apiResponder = {
-        config: config,
-        initialize: function() {
-            var lsof, port = apiResponder.port,
-                listen = function() {
-
-                    // allow posts up to 50MB in size
-                    app.use(bodyParser.json({
-                        limit: '50mb'
-                    }));
-                    app.use(bodyParser.urlencoded({
-                        limit: '50mb',
-                        extended: true
-                    }));
-                    // app.use(multer()); // for parsing multipart/form-data
-
-                    // provides req.cookies
-                    app.use(cookieParser());
-
-                    // serve everything in 'public' folder as static files
-                    app.use(express.static(
-                        (typeof apiResponder.config === 'object' && apiResponder.config.public) ||
-                        'public'
-                    ));
-                    server.listen(port, '0.0.0.0', function() {
-                        console.log('[router] Responder listening on port ' + port + '  Initialising responses');
-                        apiResponder.initializeController();
-                    });
-                };
-
-            // check if port alreay in use
-            // don't check in hosted environment or Windows
-            if (!process.env.PORT && !process.env.port && (platform === 'darwin' || platform === 'linux')) {
-                lsof = shell.exec('lsof -i :' + port, function(id, output) {
-
-                    // if a 'node' process is already using requested port, kill process
-                    if (output.split('\n').length > 1) {
-                        var listening = false;
-                        _.each(output.split('\n'), function(line) {
-                            if (!listening && line && line.substr(0, 4) === 'node') {
-                                listening = true;
-                                var pid = line.replace(/\s+/g, '|').split('|')[1];
-                                shell.exec('kill -9 ' + pid, function() {
-                                    console.log('[router] Killing process ' + pid + ' already usng port ' + port);
-                                    listen();
-                                });
-                            }
-                        });
-                        if (!listening) {
-                            listen();
-                        }
-                    } else {
-                        // console.log('router] port '+port+' available');
-                        listen();
-                    }
-                });
-            } else {
-                listen();
-            }
-        },
-        responder: function(route, req, res) {
-
-
-            // add in default values
-            var apiPromise, timer = new Date().getTime(),
-                api = _.extend(
-                    _.clone(apiResponder.config.defaults),
-                    route,
-
-                    // pass request query string and post body (if any) to responder method
-                    _.pick(req, ['query', 'body', 'params', 'cookies']), {
-                        req: req,
-                        res: res
-                    }
-                );
-
-            // run the api.responder method (sets api.response and may amend api.response_status)
-            // or apply the reverse proxy specification to 'request'
-            apiPromise = typeof api.rproxy === 'object' ? apiResponder.getReverseProxy(api) :
-                new Promise(function(resolve, reject) {
-
-                    // allow api responders to use the getProxy syntax
-                    // by passing reference to it
-                    // api.getReverseProxy = apiResponder.getReverseProxy;
-                    try {
-                        api.responder.apply(this, [api, resolve, reject]);
-                    } catch (e) {
-                        reject(e);
-                    }
-                });
-
-            apiPromise.then(function(response) {
-                if (response !== undefined) {
-                    api.response = response;
-                }
-                timer = new Date().getTime() - timer;
-                setTimeout(function() {
-
-                    // send the response
-                    // add CORS header to allow cross-domain access to responder
-                    if (api.CORS) {
-                        res.header('Access-Control-Allow-Origin', '*');
-                        res.header('Access-Control-Allow-Headers', 'Origin, X-Requested-With, Content-Type, Accept');
-                    }
-
-                    // if response is a file the api-config should set api.type and api.filepath
-                    // corresponding to requested file 
-                    if (api.filepath) {
-                        if (!api.type && api.filepath.lastIndexOf('.') !== -1) {
-                            api.type = api.filepath.substr(api.filepath.lastIndexOf('.') + 1);
-                        }
-                        fs.readFile(api.filepath, function(err, file) {
-
-                            // sets mime-type
-                            res.type(api.type);
-                            if (api.attachment) {
-
-                                // sets content disposition and mime-type
-                                // eg Content-Disposition: attachment; filename="xxx.pdf"
-                                res.attachment(api.filepath);
-                            }
-                            res.status(api.response_status).send(file);
-                        });
-                    } else {
-                        if (api.type) {
-                            res.type(api.type);
-                        }
-                        res.status(api.response_status).send(api.response);
-                    }
-                }, Math.max(0, api.response_time - timer));
-            }).catch(function(err) {
-                if (typeof api.error_responder === 'function') {
-                    api.error_responder();
-                    res.status(api.response_status).send(api.error_response);
-                } else {
-                    res.status(500).send(err.toString() || '');
-                }
-            });
-        },
-
-        initializeController: function() {
-            var config = apiResponder.config;
-            if (!config.apis.length) {
-                console.log('[router] No responses defined yet');
-            }
-
-            // add a router for each api response in config
-            _.each(config.apis, function(route, index) {
-                console.log('     ' + (index + 1) + '. ' + (route.method || config.defaults.method) + ' ' + route.endpoint);
-                var method = (route.method || config.defaults.method).toLowerCase();
-
-                // eg app.get('/webapi/api/v1/client/leadData',function(){ ... })
-                if (route.middleware) {
-                    app[method](route.endpoint, route.middleware, function(req, res) {
-                        apiResponder.responder(route, req, res);
-                    });
-                } else {
-                    app[method](route.endpoint, function(req, res) {
-                        apiResponder.responder(route, req, res);
-                    });
-                }
-            });
-        },
-
-        getReverseProxy: function(api, rproxy) {
-            var config = apiResponder.config;
-            return new Promise(function(resolve, reject) {
-                if (rproxy === undefined && typeof api.rproxy === 'object') {
-                    rproxy = api.rproxy;
-                }
-
-                // fill in any missing details of the proxy request from the express req object
-                rproxy.url = rproxy.url || api.req.path;
-                rproxy.qs = rproxy.qs || _.extend(api.req.query, rproxy.baseQuery || {});
-                rproxy.method = rproxy.method || api.req.method;
-                rproxy.baseUrl = rproxy.baseUrl || config.rproxy_defaults.baseUrl;
-
-                // headers priority order: 
-                // 1. headers specified in api definition; 2. specified in config defaults; 3. headers supplied by 'req'
-
-                rproxy.headers = _.extend(
-
-                    // filtered req headers
-                    _.omit(_.clone(api.req.headers), config.rproxy_defaults.rproxy_headers_omit || []),
-
-                    // any default headers
-                    config.rproxy_defaults.headers,
-
-                    // any headers specified in api config
-                    rproxy.headers || {}
-                );
-                if (rproxy.method === 'POST') {
-                    if (api.req.headers['content-type'] === 'application/x-www-form-urlencoded') {
-                        rproxy.form = api.req.body;
-
-                    }
-                    /*  // multipart
-                    else if (api.req.headers['content-type'] === 'multipart/form-data') {
-                                    rproxy.multipart = TBA;
-                                } 
-                    */
-                    else {
-                        rproxy.body = rproxy.body || api.req.body;
-                        if (typeof rproxy.body === 'object') {
-                            rproxy.json = true;
-                        }
-                    }
-                }
-
-                // apply the rproxy object to 'request' and feed back the response
-                // including the reponse headers and status code
-                request(rproxy, function(err, response, body) {
-
-                    if (err) {
-                        reject(err);
-                    } else {
-                        api.response_status = response.statusCode;
-                        _.each(response.headers, function(value, attr) {
-                            api.res.setHeader(attr, value);
-                        });
-                        api.response = body;
-                        resolve(body);
-                    }
-                });
-            });
-        }
-    },
-    setPort = function(args) {
-
-        return process.env.PORT || process.env.port || args[0] || apiResponder.config.port || 4512;
-    },
-    exports = function() {
-
-        /* arguments: ([listenOn], [configFile])*/
-        var port_set;
-        _(arguments).each(function(arg) {
-            if (typeof arg === 'number') {
-                port_set = true;
-                apiResponder.port = arg;
-            }
-            if (!isNaN(parseInt(arg, 10))) {
-                apiResponder.port = parseInt(arg, 10);
-                port_set = true;
-            } else if (typeof arg === 'string') {
-
-                // overwrite default config
-                apiResponder.config = require(join(__dirname, arg));
-            }
-
-            if (arg && typeof arg === 'object') {
-                if (arg.port) {
-                    apiResponder.port = arg.port;
-                    port_set = true;
-                }
-
-                // overwrite default config
-                apiResponder.config = arg;
-            }
-        });
-
-        // give precendece to process.env.port in hosted environments
-        if (process.env.PORT || process.env.port) {
-            apiResponder.port = process.env.PORT || process.env.port;
-            port_set = true;
-        }
-        if (!port_set) {
-            apiResponder.port = setPort(args);
-        }
-        apiResponder.initialize();
-        return apiResponder;
-
-    };
-
+// when invoked with node server -port xxx -config xxx -public xxx
+// // when invoked via require - define module.exports
 if (require.main === module) {
-    apiResponder.port = setPort(args);
-    apiResponder.initialize();
+  ApiResponder.parseArgsAndInit(args)
+} else {
+  exports = function(config, port, app) {
+    let apiResponder
+    for (var i = 1; i < arguments.length; i++) {
+      if (
+        arguments[i].constructor &&
+        arguments[i].constructor.name &&
+        arguments[i].constructor.name === 'EventEmitter'
+      ) {
+        // app passed
+        app = arguments[i]
+      } else if (typeof arguments[i] === 'object' || typeof arguments[i] === 'string') {
+        config = arguments[i]
+      } else if (typeof arguments[i] === 'number') {
+        // app passed
+        port = arguments[i]
+      }
+    }
+    apiResponder = new ApiResponder(config, port, app)
+    exports.app = apiResponder.app
+    if (apiResponder.server) {
+      exports.server = apiResponder.server
+    }
+    return apiResponder
+  }
+  exports.addPublic = function(path) {
+    app.use(express.static(path))
+  }
+  module.exports = exports
 }
-// export the app and getReverseProxy method as well as the initialiser.
-exports.addPublic = function(path) {
-    app.use(express.static(path));
-};
-exports.app = app;
-exports.server = server;
-exports.getReverseProxy = apiResponder.getReverseProxy;
-module.exports = exports;
