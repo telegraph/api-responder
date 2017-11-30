@@ -262,20 +262,7 @@ if (global.describe) {
         .catch(err => {
           assert.fail(null, null, err.stack.split('\n')[0])
         })
-        .catch(done)
-    })
-    it('should get valid text/html response from get request to endpoint with reverse proxy responder with requestTransform', done => {
-      axios({ url: 'http://localhost:' + port + '/bbc/iplayer' })
-        .then(response => {
-          assert.equal(response.status, 200)
-          assert.ok(response.data.indexOf('iplayer/episode') !== -1)
-          assert.ok(response.headers['content-type'].indexOf('text/html') !== -1)
 
-          done()
-        })
-        .catch(err => {
-          assert.fail(null, null, err.stack.split('\n')[0])
-        })
         .catch(done)
     })
   })

@@ -242,7 +242,7 @@ if (global.describe) {
         .catch(done)
     })
     it('should get valid text/html response from get request to endpoint with reverse proxy responder with requestTransform', done => {
-      axios({ url: 'http://localhost:8084/bbc/iplayer' })
+      axios({ url: 'http://localhost:8084/iplayer', method: 'POST' })
         .then(response => {
           assert.equal(response.status, 200)
           assert.ok(response.data.indexOf('iplayer/episode') !== -1)

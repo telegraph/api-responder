@@ -2,6 +2,7 @@ let am = require('async-methods'),
   join = require('path').join
 module.exports = {
   port: 8081,
+  auto: 'endpoints',
   public: 'tests/public',
   apis: [
     {
@@ -95,12 +96,17 @@ module.exports = {
       }
     },
     {
+      // change method in reverse proxy using requestTransform
       endpoint: '/iplayer*',
+      method: 'POST',
       rproxy: function(api) {
         return {
           url: api.req.url,
           baseURL: 'http://bbc.co.uk'
         }
+      },
+      transformRequest: function(api) {
+        api.meethod = 'GET'
       }
     },
     {

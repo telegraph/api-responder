@@ -3,6 +3,7 @@
 let args = process.argv.slice(2),
   express = require('express'),
   fs = require('fs-extra'),
+  walker = require('klaw-sync'),
   am = require('async-methods'),
   join = require('path').join,
   bodyParser = require('body-parser'),
@@ -12,6 +13,7 @@ let args = process.argv.slice(2),
   axios = require('axios'),
   defaultConfig = {
     port: 8081,
+    auto: './endpoints',
     defaults: {
       response_status: 200,
       method: 'GET',
@@ -37,10 +39,12 @@ class ApiResponder {
         this.config.defaults[attr] = defaultConfig.defaults[attr]
       }
     }
-    this.setPort(port)
+    self.setPort(port)
     if (staticFolder) {
       this.config.public = staticFolder
     }
+
+    self.autoConfigureRoutes()
     // start server or route only
 
     let apiResponder = am(function(cb) {
@@ -158,6 +162,10 @@ class ApiResponder {
     })
   }
   rproxy(api) {
+    if (typeof api.transformRequest === 'function') {
+      api.transformRequest(api)
+    }
+
     let config =
       typeof api.rproxy === 'function'
         ? api.rproxy(api)
@@ -177,6 +185,7 @@ class ApiResponder {
     if (api.body) {
       config.data = api.body
     }
+
     return am(axios(config))
       .next(response => {
         api.response_status = response.status
@@ -209,7 +218,7 @@ class ApiResponder {
     for (attr in endpointConfig) {
       api[attr] = endpointConfig[attr]
     }
-    ;['query', 'body', 'params', 'cookies'].forEach(attr => {
+    ;['query', 'body', 'params', 'cookies', 'headers', 'url'].forEach(attr => {
       api[attr] = req[attr]
     })
     am(
@@ -282,6 +291,44 @@ class ApiResponder {
     port = port || null
     this.config.port = this.port =
       process.env.PORT || process.env.port || port || this.config.port || 8081
+  }
+  autoConfigureRoutes() {
+    if (!this.config || !this.config.auto || !this.config.apis) {
+      return
+    }
+    let self = this,
+      endpointsDirectory = join(__dirname, self.config.auto),
+      endpointFiles = []
+
+    am(fs.access(endpointsDirectory))
+      .then(() => {
+        endpointFiles = walker(endpointsDirectory, {
+          nodir: true,
+          filter: file => {
+            return file.path.indexOf('.js') !== -1
+          }
+        })
+        let treeBasedRoutes = endpointFiles.map(file => {
+          let endpoint = { method: 'get' }
+          if (file.path.indexOf('post.js') !== -1) {
+            endpoint.method = 'post'
+            endpoint.endpoint = file.path.replace(endpointsDirectory, '').replace(/post\.js/i, '')
+          } else if (file.path.indexOf('put.js') !== -1) {
+            endpoint.method = 'post'
+            endpoint.endpoint = file.path.replace(endpointsDirectory, '').replace(/post\.js/i, '')
+          } else if (file.path.indexOf('head.js') !== -1) {
+            endpoint.method = 'post'
+            endpoint.endpoint = file.path.replace(endpointsDirectory, '').replace(/post\.js/i, '')
+          } else {
+            endpoint.endpoint = file.path.replace(endpointsDirectory, '').replace(/\.js/i, '')
+          }
+          endpoint.responder = require(file.path)
+          self.config.apis.push(endpoint)
+        })
+      })
+      .catch(err => {
+        console.log('Nominated auto directory, ', defaultConfig.auto, "doesn't exist")
+      })
   }
   static parseArgsAndInit(args) {
     let port, app, config, staticFolder
