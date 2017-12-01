@@ -1,7 +1,7 @@
 # api-responder
 
 
-<blockquote><strong>Quickly create API endpoints using promises or yield for async operations.. </strong></blockquote>
+<blockquote><strong>Quickly create API endpoints using promises or yield for async operations. </strong></blockquote>
 
 ## Intro
 
@@ -386,7 +386,6 @@ will not have CORS header in response
 ####Reverse proxy endpoints with transformResponse
 
 ```
-
     {
       endpoint: '/newsapi/sources',
       rproxy: {
@@ -399,3 +398,15 @@ will not have CORS header in response
     }
 
 ```
+
+##Tests
+
+```
+
+There are automated tests for all the above features
+
+  $ mocha tests
+
+
+  ```
+
