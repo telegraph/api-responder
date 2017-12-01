@@ -42,7 +42,7 @@
 ### installation
 
 ```
-     $ npm install api-responder
+     $ npm install api-responder -P
 
  ```    
 
@@ -85,15 +85,18 @@
   - response_status:  200
   - public: 'public'
   - port: 8081
-```
 
-### api-responder API
+
+## api-responder API
 
 ### Config
+
+see **/tests/test-app-external-config.js**
+
 ```
     { 
         method:'get|post|put|etc',  // default 'get',
-
+        endpoint:'/v1/test/location',
         // Promise-based
         responder:  function(api, resolve,reject){
         
@@ -145,7 +148,7 @@
                 url:'http://bbc.co.uk',
                 transformRequest:api=>{  //optional
 
-                        // change api or api.rproxy attributes
+                        // change api (eg set api.CORS) or api.rproxy attributes
                         // by reference.  See above for api options
                 },
                 transformResponse:data=>{  // optional
@@ -154,10 +157,12 @@
                 }
         }
     }
-    ```
+```
 
-    To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
-    ```
+To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
+    
+    
+```
         apiResponder({
                 port: { ... },
                 public: '...',
@@ -165,34 +170,232 @@
                 apis:[ ... ]
         })
 
-    ```
-  
-   
-Promise-based responders
+```
+
+####Promise-based responders
+
+```
+    {apis:{ 
+        method:'get|post|put|etc',  // default 'get',
+         endpoint:'/v1/test/location',
+        // Promise-based
+        responder:  function(api, resolve,reject){
+        
+        // request data
+
+        // api.body
+        // api.query
+        // api.cookie
+        // api.params
+        // api.req
+        
+
+        // settings
+
+        // api.res
+        // api.response
+        // api.response_status 
+        // api.filepath - return file
+        // api.attachment - true/false
+        // api.CORS - true/false
+        // api.headers
+        },{ .. },{ .. }
+      ]
+    }
+```
+
+####Generator-based responder
+
+```
+    {apis:  { 
+        method:'get|post|put|etc',  // default 'get',
+         endpoint:'/v1/location/:city',
+        // or Generator-based
+        responder:  function(){
+        let state=this
+       
+        // request data
+        
+        // state.body
+        // state.query
+        // state.cookie
+        // state.params
+        // state.req
+        // state.headers
+        
+
+        // settings
+
+        // state.res.status(404)  or
+        // state.response_status = 404
+        // state.filepath - return file
+        // state.attachment - true/false
+        // state.CORS - true/false
+        },{ .. },{ .. }
+      ]
+    }
+```
+
+####Config has nominated public folder
+
+```
+    {
+      ..
+      public:'dist',
+      ..
+    }
+
+```
+
+####Post body passed to endpoint responder
+
+```
+
+    apis:[{
+      ..
+      ..
+      method:'post',
+      responder: function*(){
+        let state-this, body=state.body, response
+
+        // do something async with post body
+
+        return response
+      }
+    },{
+      ..
+      ..
+      method:'post',
+      responder: (api,resolve)=>{
+        let response, body=api.body
+
+        // do something async with post body
+
+        resolve(responde)
+      }
 
 
-Generator-based responder
+    }]
+
+```
+
+###Params and query objects passed to endpoint responders
+
+```
+    {
+      endpoint: '/genparams/:field',
+      responder: function*() {
+        let state = this
+        return yield {
+          params: state.params,
+          query: state.query
+        }
+      }
+    }
+
+```
+  localhost:8081//genparams/London?a=456&b=67
+
+  returns: {params:{field:'London'},query:{a:456,b:67}}
 
 
-Handles GET, POST, PUT, HEAD etc requests
-   
+####By default responder sets CORS header, can be changed as required
 
-Config has nominated public folder
+```
+    {
+      endpoint: '/noCORS',
+      CORS: false,
+      responder: function(api, resolve) {
+        resolve({ test: 67 })
+      }
+    },
 
-Post body passed to endpoint responder
+```
 
-Params and query objects passed to endpoint responders
+localhost:8081//noCORS
 
-By default responder sets CORS header, can be changed as required
+will not have CORS header in response
 
-If error thrown in responder, response staus is set to 500
+####If error thrown in responder, response status is set to 500
 
-Support download of a file attachment 
+```
+   // returns status code 500
 
-Reverse proxy endpoints
+   {}
+      endpoint: '/throw',
+      responder: function*() {
+        let state = this
+        throw { error: 67 }
 
-Reverse proxy endpoints with requestTransform
+        return yield am({ test: 98 })
+      }
+    },
 
-Reverse proxy endpoints with responseTransform
+```
 
-          
+####Support download of a file attachment 
+
+```
+    {
+      endpoint: '/download',
+      responder: function(api, resolve) {
+        api.filepath = join(__dirname, '../LeavingEden.mp3')
+        api.type = 'audio/mpeg'
+        api.attachment = resolve()
+      }
+    }
+
+```
+
+####Reverse proxy endpoints
+
+```
+    {
+      endpoint: '/bbc*',
+      rproxy: function(api) {
+        return {
+          url: api.req.url.replace('/bbc', ''),
+          baseURL: 'http://bbc.co.uk'
+        }
+      }
+
+```
+
+####Reverse proxy endpoints with transformRequest
+
+```
+
+  {
+      // change method in reverse proxy using transformRequest
+      endpoint: '/iplayer*',
+      method: 'POST',
+      rproxy: function(api) {
+        return {
+          url: api.req.url,
+          baseURL: 'http://bbc.co.uk'
+        }
+      },
+      transformRequest: function(api) {
+        api.meethod = 'GET'
+      }
+    }
+
+
+```
+
+####Reverse proxy endpoints with transformResponse
+
+```
+
+    {
+      endpoint: '/newsapi/sources',
+      rproxy: {
+        url: 'https://newsapi.org/v2/sources',
+        params: { apiKey: 'c13f0b7040a0461397c250f1c94233d0' }
+      },
+      transformResponse: function*(data) {
+        return yield data.sources
+      }
+    }
+
+```
