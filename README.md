@@ -1,22 +1,28 @@
 # api-responder
 
 
-<blockquote><strong>Quickly create API endpoints using promises or yield for async operations. </strong></blockquote>
+<blockquote><strong>Quickly create API endpoints using promises or generators/yield for async operations. </strong></blockquote>
 
 ## Intro
 
-###A 3 way router and server
+[github](https://github.com/ingenious/api-responder)  see also [async-methods](https://github.com/ingenious/async-methods)
 
-####1.  A server with options for port, public folder and router config set on command line
+[npm](https://www.npmjs.com/package/api-responder)
+
+### A 3 way router and server
+
+#### 1.  A server with options for port, public folder and router config set on command line
 
 ```
+
         $ node server --config  api-config.js' --port 8087
 
 ```
 
-####2.  A server module for an app which allows the setting of endpoints in a convenient json config
+#### 2.  A server module for an app which allows the setting of endpoints in a convenient json config
 
 ```
+
    const port=8067, apiResponder =require('api-responder')
      apiResponder('test-api-config', port)
          .then(responder=>{
@@ -30,8 +36,9 @@
 
 ```
 
-####3.  A router which can be added to any express app
+#### 3.  A router which can be added to any express app
 ```
+
      //  app already exists
 
         const apiResponder =require('api-responder')
@@ -48,9 +55,10 @@
 
 ### Router config
 
-####  Simple Format using defaults
+#### Simple Format using defaults
 
 ```
+
       // in external file
       module.exports={
       apis: [
@@ -77,8 +85,10 @@
           }
         ]
       };
+
 ```
-####Defaults
+
+#### Defaults
 
   - method: 'get'
   - CORS:  true
@@ -94,6 +104,7 @@
 see **/tests/test-app-external-config.js**
 
 ```
+
     { 
         method:'get|post|put|etc',  // default 'get',
         endpoint:'/v1/test/location',
@@ -157,12 +168,14 @@ see **/tests/test-app-external-config.js**
                 }
         }
     }
+
 ```
 
 To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
     
     
 ```
+
         apiResponder({
                 port: { ... },
                 public: '...',
@@ -172,9 +185,10 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 ```
 
-####Promise-based responders
+#### Promise-based responders
 
 ```
+
     {apis:{ 
         method:'get|post|put|etc',  // default 'get',
          endpoint:'/v1/test/location',
@@ -204,7 +218,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
     }
 ```
 
-####Generator-based responder
+#### Generator-based responder
 
 ```
     {apis:  { 
@@ -234,20 +248,23 @@ To use a config either pass a relative path to an extrenal file with module.expo
         },{ .. },{ .. }
       ]
     }
-```
-
-####Config has nominated public folder
 
 ```
+
+#### Config has nominated public folder
+
+```
+
     {
       ..
       public:'dist',
       ..
     }
 
+
 ```
 
-####Post body passed to endpoint responder
+#### Post body passed to endpoint responder
 
 ```
 
@@ -279,9 +296,10 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 ```
 
-###Params and query objects passed to endpoint responders
+### Params and query objects passed to endpoint responders
 
 ```
+
     {
       endpoint: '/genparams/:field',
       responder: function*() {
@@ -294,14 +312,16 @@ To use a config either pass a relative path to an extrenal file with module.expo
     }
 
 ```
+
   localhost:8081//genparams/London?a=456&b=67
 
   returns: {params:{field:'London'},query:{a:456,b:67}}
 
 
-####By default responder sets CORS header, can be changed as required
+#### By default responder sets CORS header, can be changed as required
 
 ```
+
     {
       endpoint: '/noCORS',
       CORS: false,
@@ -316,9 +336,11 @@ localhost:8081//noCORS
 
 will not have CORS header in response
 
-####If error thrown in responder, response status is set to 500
+#### If error thrown in responder, response status is set to 500
+
 
 ```
+
    // returns status code 500
 
    {}
@@ -331,11 +353,13 @@ will not have CORS header in response
       }
     },
 
-```
-
-####Support download of a file attachment 
 
 ```
+
+#### Support download of a file attachment 
+
+```
+
     {
       endpoint: '/download',
       responder: function(api, resolve) {
@@ -345,11 +369,13 @@ will not have CORS header in response
       }
     }
 
-```
-
-####Reverse proxy endpoints
 
 ```
+
+#### Reverse proxy endpoints
+
+```
+
     {
       endpoint: '/bbc*',
       rproxy: function(api) {
@@ -361,7 +387,7 @@ will not have CORS header in response
 
 ```
 
-####Reverse proxy endpoints with transformRequest
+#### Reverse proxy endpoints with transformRequest
 
 ```
 
@@ -383,9 +409,10 @@ will not have CORS header in response
 
 ```
 
-####Reverse proxy endpoints with transformResponse
+#### Reverse proxy endpoints with transformResponse
 
 ```
+
     {
       endpoint: '/newsapi/sources',
       rproxy: {
@@ -399,7 +426,7 @@ will not have CORS header in response
 
 ```
 
-##Tests
+## Tests
 
 ```
 
@@ -408,5 +435,5 @@ There are automated tests for all the above features
   $ mocha tests
 
 
-  ```
+```
 
