@@ -105,7 +105,7 @@
             }
           },
 
-          // Promise based
+          // or Promise based
           {
             endpoint: "/api/v2/test",
             responder: function*(api, resolve, reject) {
@@ -208,7 +208,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
     
     
 ```
-
+                                                        
         apiResponder({
                 port: { ... },
                 public: '...',
@@ -419,7 +419,7 @@ Default method is get, to configure post, put or head responders use a  ../post.
 ```
 
     // sample directory  tree
-
+                                                        
     endpoints
       v1
         location
@@ -437,7 +437,7 @@ Default method is get, to configure post, put or head responders use a  ../post.
 
 Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 ```
-
+                                                        
     {city:'Paris'}
 
 ```
@@ -445,12 +445,12 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 ### Add an additional public folder
 
 ```
-                apiResponder({
-                port: { ... },
-                public: '...',
-                defaults:{ ... },
+                                                         
+        apiResponder({
+                port: 8081,
+                public: 'public',
                 apis:[ ... ]
-        }) .addPublic('tests/dist')
+        }).addPublic('tests/dist')
 
 ```
 #### Reverse proxy endpoints
@@ -509,12 +509,13 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 
 ## Tests
 
-```
-                                                                       
+              
 There are automated tests for all the above features
-
+```
+                                
   $ mocha tests
 
+  $ nyc mocha tests
 
 ```
 
