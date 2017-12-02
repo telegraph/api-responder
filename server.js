@@ -158,7 +158,8 @@ class ApiResponder {
     cb(null, {
       server: self.server,
       app: self.app,
-      config: self.config
+      config: self.config,
+      addPublic: self.addPublic
     })
   }
   rproxy(api) {
@@ -287,6 +288,12 @@ class ApiResponder {
         res.status(500).send(err)
       })
   }
+
+  addPublic(path) {
+    if (typeof path === 'string') {
+      this.app.use(express.static(path))
+    }
+  }
   setPort(port) {
     port = port || null
     this.config.port = this.port =
@@ -358,7 +365,8 @@ if (require.main === module) {
 } else {
   exports = function(config, port, app) {
     let apiResponder
-    for (var i = 1; i < arguments.length; i++) {
+
+    for (var i = 0; i < arguments.length; i++) {
       if (
         arguments[i].constructor &&
         arguments[i].constructor.name &&
@@ -366,7 +374,9 @@ if (require.main === module) {
       ) {
         // app passed
         app = arguments[i]
-      } else if (typeof arguments[i] === 'object' || typeof arguments[i] === 'string') {
+      }
+
+      if (typeof arguments[i] === 'object' || typeof arguments[i] === 'string') {
         config = arguments[i]
       } else if (typeof arguments[i] === 'number') {
         // app passed
@@ -379,9 +389,6 @@ if (require.main === module) {
       exports.server = apiResponder.server
     }
     return apiResponder
-  }
-  exports.addPublic = function(path) {
-    app.use(express.static(path))
   }
   module.exports = exports
 }

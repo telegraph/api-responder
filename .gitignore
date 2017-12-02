@@ -1,6 +1,8 @@
 # Logs
 logs
 *.log
+.nyc
+.nyc*
 
 # Runtime data
 pids

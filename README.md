@@ -1,7 +1,7 @@
 # api-responder
 
 
-<blockquote><strong>Quickly create API endpoints using promises or generators/yield for async operations. </strong></blockquote>
+<blockquote><strong>Quickly create API endpoints using promises or generators/yield for async operations. Includes file-per-endpoint and reverse-proxy options</strong></blockquote>
 
 ## Intro
 
@@ -9,12 +9,12 @@
 
 [npm](https://www.npmjs.com/package/api-responder)
 
-### A 3 way router and server
+### A 4 way router and server
 
-#### 1.  A server with options for port, public folder and router config set on command line
+#### 1.  A quick server with options for port, public folder and router config set on command line
 
 ```
-
+                                                        
         $ node server --config  api-config.js' --port 8087
 
 ```
@@ -22,7 +22,7 @@
 #### 2.  A server module for an app which allows the setting of endpoints in a convenient json config
 
 ```
-
+                                                                        
    const port=8067, apiResponder =require('api-responder')
      apiResponder('test-api-config', port)
          .then(responder=>{
@@ -38,17 +38,49 @@
 
 #### 3.  A router which can be added to any express app
 ```
-
+                                                                        
      //  app already exists
 
         const apiResponder =require('api-responder')
         apiResponder('tests/configs/test-api-config', app)
 ```
 
+#### 4.  A file-per-endpoint app server with routing determined by directory tree
+```
+
+     // config 
+     module.exports = {
+         port: 8081,
+         auto: 'endpoints',
+         public: 'tests/public'
+     }
+
+    // sample directory  tree
+
+    endpoints
+      v1
+        location
+          city
+            type.js
+          update
+            post.js    
+       
+    // auto-generates endpoints:
+
+    1. get /v1/location/:city/type
+    2. post /v1/location/update/
+                                                           
+     //  sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
+
+     
+    {city:Paris}
+
+```
 
 ### installation
 
 ```
+                                                                        
      $ npm install api-responder -P
 
  ```    
@@ -58,7 +90,7 @@
 #### Simple Format using defaults
 
 ```
-
+                                                                        
       // in external file
       module.exports={
       apis: [
@@ -104,7 +136,7 @@
 see **/tests/test-app-external-config.js**
 
 ```
-
+                                                                        
     { 
         method:'get|post|put|etc',  // default 'get',
         endpoint:'/v1/test/location',
@@ -159,8 +191,9 @@ see **/tests/test-app-external-config.js**
                 url:'http://bbc.co.uk',
                 transformRequest:api=>{  //optional
 
-                        // change api (eg set api.CORS) or api.rproxy attributes
-                        // by reference.  See above for api options
+                        // change api (eg set api.CORS) or api.rproxy 
+                        // attributes by reference.  
+                        // See above for api options
                 },
                 transformResponse:data=>{  // optional
                     
@@ -170,7 +203,7 @@ see **/tests/test-app-external-config.js**
     }
 
 ```
-
+                                                                        
 To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
     
     
@@ -188,7 +221,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 #### Promise-based responders
 
 ```
-
+                                                                        
     {apis:{ 
         method:'get|post|put|etc',  // default 'get',
          endpoint:'/v1/test/location',
@@ -221,6 +254,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 #### Generator-based responder
 
 ```
+                                                                        
     {apis:  { 
         method:'get|post|put|etc',  // default 'get',
          endpoint:'/v1/location/:city',
@@ -254,7 +288,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 #### Config has nominated public folder
 
 ```
-
+                                                                        
     {
       ..
       public:'dist',
@@ -267,7 +301,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 #### Post body passed to endpoint responder
 
 ```
-
+                                                                        
     apis:[{
       ..
       ..
@@ -299,7 +333,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 ### Params and query objects passed to endpoint responders
 
 ```
-
+                                                                        
     {
       endpoint: '/genparams/:field',
       responder: function*() {
@@ -321,7 +355,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 #### By default responder sets CORS header, can be changed as required
 
 ```
-
+                                                                        
     {
       endpoint: '/noCORS',
       CORS: false,
@@ -340,10 +374,10 @@ will not have CORS header in response
 
 
 ```
-
+                                                                        
    // returns status code 500
 
-   {}
+   {
       endpoint: '/throw',
       responder: function*() {
         let state = this
@@ -359,7 +393,7 @@ will not have CORS header in response
 #### Support download of a file attachment 
 
 ```
-
+                                                                        
     {
       endpoint: '/download',
       responder: function(api, resolve) {
@@ -372,10 +406,57 @@ will not have CORS header in response
 
 ```
 
-#### Reverse proxy endpoints
+#### File per endpoint (auto-configure routes)
+
+Routing can be fully or partly determined by directory tree.  (mix and match with apis:[{..},{..}] configuration)
+
+Specify a top-level directory to hold the paths and specify it in the config as auto:<path>
+
+Default method is get, to configure post, put or head responders use a  ../post.sj, ../put.js or ../head.js for the module filenames
+
+
 
 ```
 
+    // sample directory  tree
+
+    endpoints
+      v1
+        location
+          city
+            type.js
+          update
+            post.js    
+       
+    // auto-generates endpoints:
+
+    1. get /v1/location/:city/type
+    2. post /v1/location/update/
+                                          
+```
+
+Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
+```
+
+    {city:'Paris'}
+
+```
+
+### Add an additional public folder
+
+```
+                apiResponder({
+                port: { ... },
+                public: '...',
+                defaults:{ ... },
+                apis:[ ... ]
+        }) .addPublic('tests/dist')
+
+```
+#### Reverse proxy endpoints
+
+```
+                                                                 
     {
       endpoint: '/bbc*',
       rproxy: function(api) {
@@ -390,7 +471,7 @@ will not have CORS header in response
 #### Reverse proxy endpoints with transformRequest
 
 ```
-
+                                                                        
   {
       // change method in reverse proxy using transformRequest
       endpoint: '/iplayer*',
@@ -412,7 +493,7 @@ will not have CORS header in response
 #### Reverse proxy endpoints with transformResponse
 
 ```
-
+                                                                        
     {
       endpoint: '/newsapi/sources',
       rproxy: {
@@ -429,7 +510,7 @@ will not have CORS header in response
 ## Tests
 
 ```
-
+                                                                       
 There are automated tests for all the above features
 
   $ mocha tests

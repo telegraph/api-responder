@@ -97,6 +97,21 @@ if (global.describe) {
         })
         .catch(done)
     })
+    it('should serve from an added public folder', done => {
+      server.addPublic('tests/dist')
+      axios({ url: 'http://localhost:8089/test.html' })
+        .then(response => {
+          assert.equal(response.status, 200)
+          assert.ok(response.headers['content-type'].indexOf('text/html') !== -1)
+          assert.ok(response.data.indexOf('<h1>Test static files in added folder</h1>') !== -1)
+          done()
+        })
+        .catch(err => {
+          assert.fail(null, null, err.stack.split('\n')[0])
+          done()
+        })
+        .catch(done)
+    })
     it('should accept post of JSON body', done => {
       axios({ method: 'POST', url: 'http://localhost:8089/post', data: { name: 'Tommy' } })
         .then(response => {
@@ -232,6 +247,7 @@ if (global.describe) {
       axios({ url: 'http://localhost:8089/v1/location/Paris/type', method: 'GET' })
         .then(response => {
           assert.equal(response.status, 200)
+          assert.deepEqual(response.data, { city: 'Paris' })
 
           done()
         })
