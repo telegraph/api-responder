@@ -2,6 +2,22 @@
   "author": {
     "name": "Stephen Giles"
   },
+  "keywords":  ["api",
+    "express",
+    "yield",
+    "generator",
+    "async",
+    "await",
+    "asynchronous",
+    "file-per-endpoint",
+    "responder",
+    "api-responder",
+    "promise",
+    "router",
+    "cors",
+    "reverse-proxy-endpoints",
+    "endpoint-responders",
+    "cors-headers"],
   "dependencies": {
     "async-methods": "^0.1.0",
     "axios": "^0.17.1",
@@ -25,8 +41,9 @@
     "type": "git",
     "url": "https://github.com/ingenious/api-responder"
   },
+  "readmeFilename": "README.md",
   "scripts": {
     "start": "node server.js"
   },
-  "version": "1.0.4"
+  "version": "1.0.5"
 }
