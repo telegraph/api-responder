@@ -2,7 +2,8 @@
   "author": {
     "name": "Stephen Giles"
   },
-  "keywords":  ["api",
+  "keywords": [
+    "api",
     "express",
     "yield",
     "generator",
@@ -17,9 +18,10 @@
     "cors",
     "reverse-proxy-endpoints",
     "endpoint-responders",
-    "cors-headers"],
+    "cors-headers"
+  ],
   "dependencies": {
-    "async-methods": "^0.1.0",
+    "async-methods": "^0.2.4",
     "axios": "^0.17.1",
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
@@ -43,7 +45,8 @@
   },
   "readmeFilename": "README.md",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "test": "mocha tests"
   },
-  "version": "1.0.5"
+  "version": "1.2.0"
 }

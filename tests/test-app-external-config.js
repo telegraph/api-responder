@@ -49,6 +49,53 @@ if (global.describe) {
         })
         .catch(done)
     })
+    it('should get valid response from get request to endpoint with class-based responder', done => {
+      axios({ url: 'http://localhost:8089/testClass' })
+        .then(response => {
+          assert.equal(response.status, 200)
+          assert.ok(response.headers['content-type'].indexOf('application/json') !== -1)
+          assert.deepEqual(response.data.method, 89)
+          assert.deepEqual(response.data.headers.host, 'localhost:8089')
+
+          done()
+        })
+        .catch(err => {
+          assert.fail(null, null, err.stack.split('\n')[0])
+          done()
+        })
+        .catch(done)
+    })
+    it('should get valid response from get request to endpoint with object formed from newed class responder', done => {
+      axios({ url: 'http://localhost:8089/testClassObject' })
+        .then(response => {
+          assert.equal(response.status, 200)
+          assert.ok(response.headers['content-type'].indexOf('application/json') !== -1)
+          assert.deepEqual(response.data.host, 'localhost:8089')
+
+          done()
+        })
+        .catch(err => {
+          assert.fail(null, null, err.stack.split('\n')[0])
+          done()
+        })
+        .catch(done)
+    })
+    it('should get valid response from get request to endpoint based on class constructor', done => {
+      axios({ url: 'http://localhost:8089/testClassConstructor' })
+        .then(response => {
+          assert.equal(response.status, 200)
+
+          assert.ok(response.headers['content-type'].indexOf('application/json') !== -1)
+          assert.deepEqual(response.data.headers.host, 'localhost:8089')
+
+          done()
+        })
+        .catch(err => {
+          assert.fail(null, null, err.stack.split('\n')[0])
+          done()
+        })
+        .catch(done)
+    })
     it('should pass endpoint params and query to promise-based responder via api argument', done => {
       axios({ url: 'http://localhost:8089/params/firstname?type=name' })
         .then(response => {

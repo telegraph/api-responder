@@ -1,7 +1,9 @@
 # api-responder
 
 
-<blockquote><strong>Quickly create API endpoints using promises or generators/yield for async operations. Includes file-per-endpoint and reverse-proxy options</strong></blockquote>
+<blockquote><strong>Quickly create API endpoints using generators/yield,  async/await or promises for async operations. Includes file-per-endpoint and reverse-proxy options</strong></blockquote>
+
+<blockquote><strong>From version 1.2 supports responders using   async/await from anonymous or named classes as well as generators/yield or promises for async operations.</strong></blockquote>
 
 ## Intro
 
@@ -9,43 +11,53 @@
 
 [npm](https://www.npmjs.com/package/api-responder)
 
+
+<blockquote> In version 1.1.x Now supports async/await in anonymous or names classes </blockquote>
+
 ### A 4 way router and server
 
 #### 1.  A quick server with options for port, public folder and router config set on command line
 
 ```
                                                         
-        $ node server --config  api-config.js' --port 8087
-
+        $ node server --config  'api-config.js' --port 8087
+  
 ```
 
 #### 2.  A server module for an app which allows the setting of endpoints in a convenient json config
 
 ```
                                                                         
-   const port=8067, apiResponder =require('api-responder')
+   const port=8067, 
+   apiResponder =require('api-responder')
+   
      apiResponder('test-api-config', port)
          .then(responder=>{
+	      
 	       /* responder: 
 	      {
 		    app:<app>,
 		    server:<server>,
 		    config:<config>
 	      }*/
+	      
       }).catch(err=>{})
-
+  
 ```
 
 #### 3.  A router which can be added to any express app
+
 ```
                                                                         
-     //  app already exists
+     //  'app' already exists in application
 
         const apiResponder =require('api-responder')
         apiResponder('tests/configs/test-api-config', app)
+    
 ```
 
 #### 4.  A file-per-endpoint app server with routing determined by directory tree
+
 ```
 
      // config 
@@ -74,7 +86,7 @@
 
      
     {city:Paris}
-
+  
 ```
 
 ### installation
@@ -82,8 +94,8 @@
 ```
                                                                         
      $ npm install api-responder -P
-
- ```    
+  
+```    
 
 ### Router config
 
@@ -117,7 +129,7 @@
           }
         ]
       };
-
+  
 ```
 
 #### Defaults
@@ -131,16 +143,19 @@
 
 ## api-responder API
 
-### Config
+### Routing Config
 
 see **/tests/test-app-external-config.js**
+
+#### 1. Promise-based responder
 
 ```
                                                                         
     { 
         method:'get|post|put|etc',  // default 'get',
         endpoint:'/v1/test/location',
-        // Promise-based
+       
+        
         responder:  function(api, resolve,reject){
         
         // request data
@@ -157,14 +172,23 @@ see **/tests/test-app-external-config.js**
         // api.res
         // api.response
         // api.response_status 
-        // api.filepath - return file
-        // api.attachment - true/false
+        // api.filepath - return file contents
+        // api.attachment - true/false - file as download
         // api.CORS - true/false
         // api.headers
         },
 
-        // or Generator-based
-        responder:  function(){
+```
+
+#### or 2.  Generator-based responder
+
+```
+        // 
+       { 
+        method:'get|post|put|etc',  // default 'get',
+        
+        endpoint:'/v1/test/location',  responder:  function(){
+       
         let state=this
        
         // request data
@@ -185,23 +209,62 @@ see **/tests/test-app-external-config.js**
         // state.attachment - true/false
         // state.CORS - true/false
         },
+```
+ 
+#### or 3a.  Class based responders - using async/await (state is passed in context - see generator based responders)
+```   
+       
+  { 
+   method:'get|post|put|etc',  // default 'get',
+     
+   endpoint: '/testClass',  
+   responder: class {
+        constructor() {}
+        async testClass() {
+          let state = this
+          return await Promise.resolve(
+             { method: 89, headers:     state.headers }
+          )
+        }
+      },
+   methodName: 'testClass'
+   
+```
+#### or 3a.  newed-Class based responders - using async/await (an 'api' argument is passed to the responding method definition - see attributes under promise-based responders)
 
-        // or reverse proxy
-        rproxy:{
-                url:'http://bbc.co.uk',
-                transformRequest:api=>{  //optional
+```
 
-                        // change api (eg set api.CORS) or api.rproxy 
-                        // attributes by reference.  
-                        // See above for api options
-                },
-                transformResponse:data=>{  // optional
-                    
+{
+      endpoint: '/testClassObject',
+      responder: new class {
+        constructor() {}
+        async test(api) {
+          return await api.headers
+        }
+      }(),
+      methodName: 'test'
+    },
+
+
+```
+
+#### or 4. reverse proxy
+
+
+```
+     rproxy:{
+        url:'http://bbc.co.uk',
+        transformRequest:api=>{  //optional
+           // change api (eg set api.CORS) or api.rproxy 
+          // attributes by reference.  
+          // See above for api options
+          },
+        transformResponse:data=>{  // optional
                     return data;
                 }
         }
     }
-
+  
 ```
                                                                         
 To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
@@ -215,7 +278,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
                 defaults:{ ... },
                 apis:[ ... ]
         })
-
+  
 ```
 
 #### Promise-based responders
@@ -249,6 +312,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
         },{ .. },{ .. }
       ]
     }
+  
 ```
 
 #### Generator-based responder
@@ -282,7 +346,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
         },{ .. },{ .. }
       ]
     }
-
+  
 ```
 
 #### Config has nominated public folder
@@ -294,8 +358,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
       public:'dist',
       ..
     }
-
-
+  
 ```
 
 #### Post body passed to endpoint responder
@@ -327,7 +390,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 
     }]
-
+  
 ```
 
 ### Params and query objects passed to endpoint responders
@@ -344,7 +407,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
         }
       }
     }
-
+  
 ```
 
   localhost:8081//genparams/London?a=456&b=67
@@ -363,7 +426,7 @@ To use a config either pass a relative path to an extrenal file with module.expo
         resolve({ test: 67 })
       }
     },
-
+  
 ```
 
 localhost:8081//noCORS
@@ -386,8 +449,7 @@ will not have CORS header in response
         return yield am({ test: 98 })
       }
     },
-
-
+   
 ```
 
 #### Support download of a file attachment 
@@ -402,8 +464,7 @@ will not have CORS header in response
         api.attachment = resolve()
       }
     }
-
-
+  
 ```
 
 #### File per endpoint (auto-configure routes)
@@ -436,10 +497,11 @@ Default method is get, to configure post, put or head responders use a  ../post.
 ```
 
 Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
+
 ```
                                                         
     {city:'Paris'}
-
+  
 ```
 
 ### Add an additional public folder
@@ -451,7 +513,7 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
                 public: 'public',
                 apis:[ ... ]
         }).addPublic('tests/dist')
-
+  
 ```
 #### Reverse proxy endpoints
 
@@ -465,7 +527,7 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
           baseURL: 'http://bbc.co.uk'
         }
       }
-
+  
 ```
 
 #### Reverse proxy endpoints with transformRequest
@@ -486,8 +548,7 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
         api.meethod = 'GET'
       }
     }
-
-
+  
 ```
 
 #### Reverse proxy endpoints with transformResponse
@@ -504,18 +565,73 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
         return yield data.sources
       }
     }
+  
+```
+
+##  CLI
+
 
 ```
+                                                                           -
+     $  node server
+  
+```
+
+Uses port, public folder and api config set in server.js
+
+```
+
+    [router] Responder listening on port 8081
+    [router] Static files in /Users/stephen/projects/github/api-responder/public
+
+     1. get /v1/location/:city/type
+     2. post /v1/location/update/
+  
+```
+
+
+
+### Optional arguments --config --port  --public
+
+```
+
+   $   node server  --config tests/configs/test-api-config.js  --port 5000 --public  './'
+  
+```
+
+Sets port to 5000 sets public directory to current and uses api config file  tests/configs/test-api-config.js
+
+```
+
+    [router] Responder listening on port 5000
+    [router] Static files in /Users/stephen/projects/github/api-responder/
+
+     1. GET /test
+     2. GET /testClass
+     3. GET /testClassObject
+     4. GET /testClassConstructor
+     5. GET /noCORS
+     ..
+     ..
+  
+```
+
 
 ## Tests
 
               
 There are automated tests for all the above features
+
 ```
-                                
+  $ npm test
+  
+  # or
+                                  
   $ mocha tests
 
+  #  or
+  
   $ nyc mocha tests
-
+  
 ```
 

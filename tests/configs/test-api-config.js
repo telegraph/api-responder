@@ -12,6 +12,35 @@ module.exports = {
       }
     },
     {
+      endpoint: '/testClass',
+      responder: class {
+        constructor() {}
+        async testClass() {
+          let state = this
+          return await Promise.resolve({ method: 89, headers: state.headers })
+        }
+      },
+      methodName: 'testClass'
+    },
+    {
+      endpoint: '/testClassObject',
+      responder: new class {
+        constructor() {}
+        async test(api) {
+          return await api.headers
+        }
+      }(),
+      methodName: 'test'
+    },
+    {
+      endpoint: '/testClassConstructor',
+      responder: class {
+        constructor(api) {
+          return { constructor: 89, headers: api.headers }
+        }
+      }
+    },
+    {
       endpoint: '/noCORS',
       CORS: false,
       responder: function(api, resolve) {

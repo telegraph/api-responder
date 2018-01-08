@@ -208,9 +208,17 @@ class ApiResponder {
   }
   responder(endpointConfig, req, res) {
     var api,
+      argsHaveClass,
+      classArgs = [],
       self = this,
       timer = new Date().getTime(),
       api = { req: req, res: res }
+
+    if (endpointConfig.methodName) {
+      classArgs = [endpointConfig.methodName]
+    }
+    classArgs.push(endpointConfig.responder)
+    argsHaveClass = am.argumentsHaveClass(classArgs)
     for (var attr in self.config.defaults) {
       api[attr] = self.config.defaults[attr]
     }
@@ -230,6 +238,19 @@ class ApiResponder {
               .rproxy(api)
               .then(resolve)
               .catch(reject)
+          } else if (argsHaveClass) {
+            if (argsHaveClass.methodName && argsHaveClass.classFn) {
+              am.ExtendedPromise._applyResultToClass
+                .apply(api, [argsHaveClass])
+                .then(result => {
+                  resolve(result)
+                })
+                .catch(reject)
+            } else {
+              am.ExtendedPromise._applyResultToClass(argsHaveClass, [api])
+                .then(resolve)
+                .catch(reject)
+            }
           } else if (am.isGenerator(api.responder)) {
             am(api.responder.apply(api))
               .then(resolve)
