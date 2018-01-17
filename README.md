@@ -18,16 +18,17 @@
 
 #### 1.  A quick server with options for port, public folder and router config set on command line
 
-```
-                                                        
+```javascript
+                                                                                      
+                                                     
         $ node server --config  'api-config.js' --port 8087
   
 ```
 
 #### 2.  A server module for an app which allows the setting of endpoints in a convenient json config
 
-```
-                                                                        
+```javascript
+                                                                                      
    const port=8067, 
    apiResponder =require('api-responder')
    
@@ -47,8 +48,8 @@
 
 #### 3.  A router which can be added to any express app
 
-```
-                                                                        
+```javascript
+                                                                                      
      //  'app' already exists in application
 
         const apiResponder =require('api-responder')
@@ -58,8 +59,8 @@
 
 #### 4.  A file-per-endpoint app server with routing determined by directory tree
 
-```
-
+```javascript
+                                                                                      
      // config 
      module.exports = {
          port: 8081,
@@ -101,8 +102,8 @@
 
 #### Simple Format using defaults
 
-```
-                                                                        
+```javascript
+                                                                                      
       // in external file
       module.exports={
       apis: [
@@ -149,8 +150,9 @@ see **/tests/test-app-external-config.js**
 
 #### 1. Promise-based responder
 
-```
-                                                                        
+```javascript
+                                                                                      
+                                                                      
     { 
         method:'get|post|put|etc',  // default 'get',
         endpoint:'/v1/test/location',
@@ -182,8 +184,8 @@ see **/tests/test-app-external-config.js**
 
 #### or 2.  Generator-based responder
 
-```
-        // 
+```javascript
+                                                                                      
        { 
         method:'get|post|put|etc',  // default 'get',
         
@@ -212,8 +214,9 @@ see **/tests/test-app-external-config.js**
 ```
  
 #### or 3a.  Class based responders - using async/await (state is passed in context - see generator based responders)
-```   
-       
+```javascript
+                                                                                      
+    
   { 
    method:'get|post|put|etc',  // default 'get',
      
@@ -232,8 +235,8 @@ see **/tests/test-app-external-config.js**
 ```
 #### or 3a.  newed-Class based responders - using async/await (an 'api' argument is passed to the responding method definition - see attributes under promise-based responders)
 
-```
-
+```javascript
+                                                                                      
 {
       endpoint: '/testClassObject',
       responder: new class {
@@ -250,8 +253,8 @@ see **/tests/test-app-external-config.js**
 
 #### or 4. reverse proxy
 
-
-```
+```javascript
+                                                                                      
      rproxy:{
         url:'http://bbc.co.uk',
         transformRequest:api=>{  //optional
@@ -270,8 +273,8 @@ see **/tests/test-app-external-config.js**
 To use a config either pass a relative path to an extrenal file with module.exports=<config> or pass as an argument to apiResponser eg
     
     
-```
-                                                        
+```javascript
+                                                                                                                                             
         apiResponder({
                 port: { ... },
                 public: '...',
@@ -283,8 +286,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 #### Promise-based responders
 
-```
-                                                                        
+```javascript
+                                                                                      
     {apis:{ 
         method:'get|post|put|etc',  // default 'get',
          endpoint:'/v1/test/location',
@@ -317,8 +320,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 #### Generator-based responder
 
-```
-                                                                        
+```javascript
+                                                                                      
     {apis:  { 
         method:'get|post|put|etc',  // default 'get',
          endpoint:'/v1/location/:city',
@@ -351,8 +354,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 #### Config has nominated public folder
 
-```
-                                                                        
+```javascript
+                                                                                      
     {
       ..
       public:'dist',
@@ -363,8 +366,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 #### Post body passed to endpoint responder
 
-```
-                                                                        
+```javascript
+                                                                                      
     apis:[{
       ..
       ..
@@ -395,8 +398,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 ### Params and query objects passed to endpoint responders
 
-```
-                                                                        
+```javascript
+                                                                                      
     {
       endpoint: '/genparams/:field',
       responder: function*() {
@@ -417,8 +420,8 @@ To use a config either pass a relative path to an extrenal file with module.expo
 
 #### By default responder sets CORS header, can be changed as required
 
-```
-                                                                        
+```javascript
+                                                                                      
     {
       endpoint: '/noCORS',
       CORS: false,
@@ -435,9 +438,8 @@ will not have CORS header in response
 
 #### If error thrown in responder, response status is set to 500
 
-
-```
-                                                                        
+```javascript
+                                                                                      
    // returns status code 500
 
    {
@@ -454,8 +456,8 @@ will not have CORS header in response
 
 #### Support download of a file attachment 
 
-```
-                                                                        
+```javascript
+                                                                                      
     {
       endpoint: '/download',
       responder: function(api, resolve) {
@@ -475,10 +477,8 @@ Specify a top-level directory to hold the paths and specify it in the config as 
 
 Default method is get, to configure post, put or head responders use a  ../post.sj, ../put.js or ../head.js for the module filenames
 
-
-
-```
-
+```javascript
+                                                                                      
     // sample directory  tree
                                                         
     endpoints
@@ -498,16 +498,16 @@ Default method is get, to configure post, put or head responders use a  ../post.
 
 Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 
-```
-                                                        
+```javascript
+                                                                                      
     {city:'Paris'}
   
 ```
 
 ### Add an additional public folder
 
-```
-                                                         
+```javascript
+                                                                                      
         apiResponder({
                 port: 8081,
                 public: 'public',
@@ -517,8 +517,8 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 ```
 #### Reverse proxy endpoints
 
-```
-                                                                 
+```javascript
+                                                                                      
     {
       endpoint: '/bbc*',
       rproxy: function(api) {
@@ -532,8 +532,8 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 
 #### Reverse proxy endpoints with transformRequest
 
-```
-                                                                        
+```javascript
+                                                                                      
   {
       // change method in reverse proxy using transformRequest
       endpoint: '/iplayer*',
@@ -553,8 +553,8 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 
 #### Reverse proxy endpoints with transformResponse
 
-```
-                                                                        
+```javascript
+                                                                                      
     {
       endpoint: '/newsapi/sources',
       rproxy: {
@@ -572,7 +572,7 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 
 
 ```
-                                                                           -
+                                                                                      
      $  node server
   
 ```
@@ -580,7 +580,7 @@ Sample response  from http://localhost:8081/v1/location/Paris/type?a=45&b=67
 Uses port, public folder and api config set in server.js
 
 ```
-
+                                                                                      
     [router] Responder listening on port 8081
     [router] Static files in /Users/stephen/projects/github/api-responder/public
 
@@ -594,6 +594,7 @@ Uses port, public folder and api config set in server.js
 ### Optional arguments --config --port  --public
 
 ```
+                                                                                      
 
    $   node server  --config tests/configs/test-api-config.js  --port 5000 --public  './'
   
@@ -602,7 +603,7 @@ Uses port, public folder and api config set in server.js
 Sets port to 5000 sets public directory to current and uses api config file  tests/configs/test-api-config.js
 
 ```
-
+                                                                                      
     [router] Responder listening on port 5000
     [router] Static files in /Users/stephen/projects/github/api-responder/
 
@@ -615,15 +616,13 @@ Sets port to 5000 sets public directory to current and uses api config file  tes
      ..
   
 ```
-
-
 ## Tests
-
-              
+           
 There are automated tests for all the above features
 
 ```
-  $ npm test
+                                                                                      
+	  $ npm test
   
   # or
                                   
