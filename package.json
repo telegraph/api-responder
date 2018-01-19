@@ -21,7 +21,7 @@
     "cors-headers"
   ],
   "dependencies": {
-    "async-methods": "^0.2.4",
+    "async-methods": "^0.2.11",
     "axios": "^0.17.1",
     "body-parser": "^1.18.2",
     "cookie-parser": "^1.4.3",
@@ -48,5 +48,5 @@
     "start": "node server.js",
     "test": "mocha tests"
   },
-  "version": "1.2.1"
+  "version": "1.2.2"
 }

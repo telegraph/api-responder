@@ -19,8 +19,7 @@
 #### 1.  A quick server with options for port, public folder and router config set on command line
 
 ```javascript
-                                                                                      
-                                                     
+                                                                                                                                       
         $ node server --config  'api-config.js' --port 8087
   
 ```
@@ -47,7 +46,7 @@
 ```
 
 #### 3.  A router which can be added to any express app
-
+                                                                   
 ```javascript
                                                                                       
      //  'app' already exists in application
