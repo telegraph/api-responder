@@ -13,7 +13,7 @@ let args = process.argv.slice(2),
   axios = require('axios'),
   defaultConfig = {
     port: 8081,
-    auto: './endpoints',
+    auto: false,
     defaults: {
       response_status: 200,
       method: 'GET',
